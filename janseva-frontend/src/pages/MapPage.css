@@ -1,0 +1,132 @@
+.map-hdr { display: flex; align-items: center; justify-content: space-between; }
+
+.map-live-badge {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 600; color: #16A34A;
+  border: 1px solid rgba(22,163,74,0.35);
+  border-radius: 20px; padding: 3px 10px;
+}
+.map-live-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: #16A34A;
+  animation: pulse-glow 1.5s ease-in-out infinite;
+}
+@keyframes pulse-glow {
+  0%,100% { opacity:1; box-shadow: 0 0 0 0 rgba(22,163,74,0.4); }
+  50%     { opacity:.8; box-shadow: 0 0 0 4px rgba(22,163,74,0); }
+}
+
+/* Filters */
+.map-filters {
+  display: flex; gap: 8px; padding: 12px 20px;
+  border-bottom: 1px solid var(--border-soft);
+  overflow-x: auto; scrollbar-width: none;
+}
+.map-filters::-webkit-scrollbar { display: none; }
+
+.map-chip {
+  flex-shrink: 0; background: var(--bg-surface);
+  border: 1px solid var(--border); border-radius: 6px;
+  padding: 5px 12px; font-size: 12px; font-family: var(--font);
+  color: var(--text-secondary); cursor: pointer;
+  transition: all var(--t-fast);
+}
+.map-chip:hover { color: var(--text-primary); border-color: var(--text-tertiary); }
+.map-chip.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+/* Map */
+.map-wrap {
+  position: relative;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.map-svg {
+  width: 100%; height: auto;
+  display: block;
+  background: radial-gradient(ellipse at 50% 40%, rgba(255,255,255,0.02) 0%, transparent 70%);
+}
+
+/* Legend */
+.map-legend {
+  position: absolute; bottom: 12px; left: 12px;
+  background: rgba(10,10,10,0.85);
+  border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 12px;
+  display: flex; flex-direction: column; gap: 5px;
+}
+.map-legend-item {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; color: var(--text-secondary);
+}
+.map-legend-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+.map-legend-river {
+  width: 14px; height: 2px;
+  background: rgba(8,145,178,0.5);
+  border-radius: 1px; flex-shrink: 0;
+}
+
+/* Tooltip */
+.map-tooltip {
+  position: absolute; top: 12px; right: 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 14px;
+  min-width: 160px;
+  animation: slideUp 150ms ease;
+}
+@keyframes slideUp {
+  from { opacity:0; transform: translateY(6px); }
+  to   { opacity:1; transform: translateY(0); }
+}
+.map-tooltip-hdr {
+  display: flex; align-items: center;
+  justify-content: space-between; margin-bottom: 10px;
+}
+.map-tooltip-loc { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.map-tooltip-close {
+  background: none; border: none; color: var(--text-tertiary);
+  font-size: 12px; cursor: pointer; padding: 2px 4px;
+  border-radius: 4px; transition: color var(--t-fast);
+}
+.map-tooltip-close:hover { color: var(--text-primary); }
+.map-tooltip-row {
+  display: flex; justify-content: space-between; gap: 8px;
+  padding: 4px 0; border-bottom: 1px solid var(--border-soft);
+}
+.map-tooltip-row:last-child { border-bottom: none; }
+.map-tt-label { font-size: 11px; color: var(--text-tertiary); }
+.map-tt-val   { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+
+/* Summary strip */
+.map-summary {
+  display: flex; align-items: center; gap: 16px;
+  padding: 12px 20px; border-bottom: 1px solid var(--border-soft);
+}
+.map-sum-item { display: flex; align-items: baseline; gap: 5px; }
+.map-sum-num  { font-size: 16px; font-weight: 700; color: var(--text-primary); }
+.map-sum-label{ font-size: 11px; color: var(--text-tertiary); }
+.map-sum-sep  { width: 1px; height: 14px; background: var(--border); }
+
+/* District list */
+.map-district-list { display: flex; flex-direction: column; }
+
+.map-district-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border-soft);
+  cursor: pointer;
+  transition: background var(--t-fast);
+}
+.map-district-row:hover { background: var(--bg-surface); }
+.map-district-row.active { background: var(--bg-surface); }
+
+.map-district-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.map-district-name { font-size: 14px; color: var(--text-primary); font-weight: 500; flex: 1; }
+.map-district-cat  { font-size: 12px; color: var(--text-tertiary); }
+.map-district-count{
+  font-size: 13px; font-weight: 700; color: var(--text-primary);
+  min-width: 20px; text-align: right;
+}

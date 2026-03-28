@@ -1,0 +1,112 @@
+.rc {
+  display: block;
+  text-decoration: none;
+  border-bottom: 1px solid var(--border-soft);
+  transition: background var(--t-fast);
+  cursor: pointer;
+}
+.rc:hover { background: var(--bg-surface); }
+.rc:hover .rc-title { color: #fff; }
+.rc:active { background: var(--bg-elevated); }
+
+/* AI Signal strip — much softer */
+.rc-signal {
+  font-size: 11px;
+  font-weight: 500;
+  border-left: 2px solid;
+  padding: 5px var(--sp-5) 5px 14px;
+  letter-spacing: 0.01em;
+  opacity: 0.75;
+}
+
+.rc-body {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-4);
+  padding: var(--sp-4) var(--sp-5);
+}
+
+.rc-main {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column;
+  gap: var(--sp-2);
+}
+
+/* Badges */
+.rc-badges { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+
+.rc-resolved {
+  font-size: 10px; font-weight: 600;
+  color: var(--minor);
+  border: 1px solid var(--minor-border);
+  background: var(--minor-bg);
+  border-radius: 4px; padding: 2px 7px;
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+
+/* Title */
+.rc-title {
+  font-size: 14px; font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em; line-height: 1.45;
+  transition: color var(--t-fast);
+}
+
+/* Description */
+.rc-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  opacity: 0.85;
+}
+
+/* Impact */
+.rc-impact {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; color: var(--text-tertiary);
+}
+
+/* Footer */
+.rc-footer {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  margin-top: var(--sp-1);
+  flex-wrap: wrap; gap: 6px;
+}
+
+.rc-loc {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 11px; color: var(--text-tertiary);
+}
+
+.rc-actions { display: flex; align-items: center; gap: 2px; }
+
+.rc-btn {
+  display: flex; align-items: center; gap: 4px;
+  background: transparent; border: none;
+  border-radius: var(--r-sm); padding: 4px 7px;
+  font-size: 12px; color: var(--text-tertiary);
+  cursor: pointer; font-family: var(--font);
+  transition: background var(--t-fast), color var(--t-fast), transform var(--t-fast);
+}
+.rc-btn:hover { background: var(--bg-elevated); color: var(--text-secondary); }
+.rc-btn:active { transform: scale(0.93); }
+
+.rc-btn--up   { color: var(--accent-soft); background: var(--accent-dim); }
+.rc-btn--flag { color: var(--severe); background: var(--severe-bg); }
+
+.rc-time {
+  font-size: 11px; color: var(--text-tertiary);
+  padding-left: var(--sp-1); white-space: nowrap;
+}
+
+/* Thumbnail */
+.rc-thumb { flex-shrink: 0; width: 72px; }
+.rc-thumb img {
+  width: 72px; height: 54px; object-fit: cover;
+  border-radius: var(--r-sm); display: block;
+  background: var(--bg-elevated);
+  opacity: 0.85;
+  transition: opacity var(--t-mid);
+}
+.rc:hover .rc-thumb img { opacity: 1; }

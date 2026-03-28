@@ -1,38 +1,199 @@
-.App {
-  text-align: center;
+/* ═══════════════════════════════════════════
+   JanSeva AI — Premium Design System v4
+   Softer. More depth. Less aggression.
+   ═══════════════════════════════════════════ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* ── Backgrounds: zinc-based dark, NOT pure black ── */
+  --bg-base:        #0F0F10;   /* deep zinc, not #000 */
+  --bg-surface:     #18181B;   /* card surface        */
+  --bg-elevated:    #202024;   /* hover / active      */
+  --bg-overlay:     #27272A;   /* modal / tooltip     */
+
+  /* ── Borders: very subtle ── */
+  --border:         #2E2E33;
+  --border-soft:    #1E1E22;
+  --border-muted:   #252529;
+
+  /* ── Text: softer than pure white ── */
+  --text-primary:   #ECECEE;   /* not #FFF — easier on eyes  */
+  --text-secondary: #8C8C96;   /* muted gray                 */
+  --text-tertiary:  #52525C;   /* very muted                 */
+  --text-disabled:  #3A3A42;
+
+  /* ── Accent: muted gold, not bright yellow ── */
+  --accent:         #D4910A;   /* deeper amber — more refined */
+  --accent-soft:    #E8A820;   /* slightly lighter for text   */
+  --accent-dim:     rgba(212, 145, 10, 0.09);
+  --accent-border:  rgba(212, 145, 10, 0.22);
+  --accent-hover:   #C07E08;
+
+  /* ── Semantic: all muted, never full-saturation ── */
+  --severe:         #C53030;   /* muted red,  not #DC2626 */
+  --severe-bg:      rgba(197, 48, 48, 0.07);
+  --severe-border:  rgba(197, 48, 48, 0.18);
+
+  --moderate:       #B7781A;   /* muted amber */
+  --moderate-bg:    rgba(183, 120, 26, 0.07);
+  --moderate-border:rgba(183, 120, 26, 0.20);
+
+  --minor:          #2D7D4F;   /* muted green */
+  --minor-bg:       rgba(45, 125, 79, 0.08);
+  --minor-border:   rgba(45, 125, 79, 0.22);
+
+  --info:           #2A6496;
+  --info-bg:        rgba(42, 100, 150, 0.08);
+  --info-border:    rgba(42, 100, 150, 0.22);
+
+  /* ── Typography ── */
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* ── Layout ── */
+  --sidebar-width:   220px;
+  --sidebar-icon:    60px;
+  --insights-width:  272px;
+  --content-max:     660px;
+
+  /* ── Spacing (strict system) ── */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+
+  /* ── Radii ── */
+  --r-sm:  6px;
+  --r-md:  10px;
+  --r-lg:  14px;
+  --r-xl:  18px;
+
+  /* ── Transitions ── */
+  --t-fast:   150ms ease;
+  --t-mid:    220ms ease;
+  --t-slow:   300ms ease;
+
+  /* ── Elevation shadows (very subtle) ── */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.3);
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+/* ── Base ── */
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
+body {
+  font-family: var(--font);
+  background: var(--bg-base);
+  color: var(--text-primary);
+  line-height: 1.5;
   min-height: 100vh;
+}
+
+/* ── Layout Shell ── */
+.app-shell { display: flex; min-height: 100vh; }
+
+.main-area {
+  flex: 1;
+  margin-left: var(--sidebar-width);
+  display: flex;
+  justify-content: center;
+}
+
+.feed-column {
+  width: 100%;
+  max-width: var(--content-max);
+  min-height: 100vh;
+  border-right: 1px solid var(--border-soft);
+}
+
+.insights-column {
+  width: var(--insights-width);
+  flex-shrink: 0;
+  padding: var(--sp-5) var(--sp-4);
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+  gap: var(--sp-3);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.insights-column::-webkit-scrollbar { display: none; }
+
+/* ── Page Structure ── */
+.page-content { width: 100%; }
+
+.page-header {
+  padding: var(--sp-5) var(--sp-5) var(--sp-4);
+  border-bottom: 1px solid var(--border-soft);
+  position: sticky;
+  top: 0;
+  background: rgba(15,15,16,0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 20;
 }
 
-.App-link {
-  color: #61dafb;
+.page-header h1 {
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+/* ── Section labels ── */
+.section-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.10em;
+  padding: var(--sp-4) var(--sp-5) var(--sp-2);
 }
+
+.divider { height: 1px; background: var(--border-soft); border: none; }
+
+/* ── Typography ── */
+.text-page-title  { font-size: 19px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.02em; }
+.text-card-title  { font-size: 14px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.01em; }
+.text-muted       { font-size: 13px; color: var(--text-secondary); }
+.text-tiny        { font-size: 11px; color: var(--text-tertiary); }
+.accent           { color: var(--accent-soft); }
+
+/* ── Utilities ── */
+.truncate-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.feed { display: flex; flex-direction: column; }
+
+.empty-state {
+  padding: 56px var(--sp-5);
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: 14px;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+a { color: inherit; text-decoration: none; }
+
+/* ── Responsive ── */
+@media (max-width: 1140px) { .insights-column { display: none; } }
+@media (max-width: 768px)  { .main-area { margin-left: var(--sidebar-icon); } }
+@media (max-width: 480px)  { .main-area { margin-left: 0; } }
