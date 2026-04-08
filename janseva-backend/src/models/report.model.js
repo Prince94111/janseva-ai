@@ -171,16 +171,11 @@ const reportSchema = new Schema(
   }
 );
 
-reportSchema.pre("save", function generateReportId(next) {
-  if (this.reportId) {
-    return next();
-  }
-
+reportSchema.pre("save", async function() {
+  if (this.reportId) return;
   const year = new Date().getFullYear();
   const randomNumber = Math.floor(1000 + Math.random() * 9000);
   this.reportId = `JS-${year}-${randomNumber}`;
-
-  next();
 });
 
 reportSchema.index({ location: "2dsphere" });

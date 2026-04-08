@@ -26,6 +26,9 @@ function getEnv() {
   const MONGO_URI = process.env.MONGO_URI;
   const CORS_ORIGIN = process.env.CORS_ORIGIN ?? "*";
   const JWT_SECRET = process.env.JWT_SECRET;
+  const CLOUDINARY_NAME = process.env.CLOUDINARY_NAME;
+  const CLOUDINARY_KEY = process.env.CLOUDINARY_KEY;
+  const CLOUDINARY_SECRET = process.env.CLOUDINARY_SECRET;
 
   if (!MONGO_URI) {
     throw new Error("Missing required env var: MONGO_URI");
@@ -39,12 +42,19 @@ function getEnv() {
     throw new Error("Invalid env var: PORT");
   }
 
+  if (!CLOUDINARY_NAME || !CLOUDINARY_KEY || !CLOUDINARY_SECRET) {
+  throw new Error("Missing required env vars: CLOUDINARY");
+  }
+
   return {
     PORT,
     NODE_ENV,
     MONGO_URI,
     CORS_ORIGIN,
     JWT_SECRET,
+    CLOUDINARY_NAME,
+    CLOUDINARY_KEY,
+    CLOUDINARY_SECRET,
   };
 }
 

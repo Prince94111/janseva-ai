@@ -1,10 +1,7 @@
 const jwt = require("jsonwebtoken");
-
 const { getEnv } = require("../config/env");
-
 const { JWT_SECRET } = getEnv();
-
-function auth(req, res, next) {
+function protect(req, res, next) {
   try {
     const authHeader = req.headers.authorization;
 
@@ -26,6 +23,7 @@ function auth(req, res, next) {
 
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
+
     return next();
   } catch (error) {
     return res.status(401).json({
@@ -35,4 +33,4 @@ function auth(req, res, next) {
   }
 }
 
-module.exports = { auth };
+module.exports = { protect };
