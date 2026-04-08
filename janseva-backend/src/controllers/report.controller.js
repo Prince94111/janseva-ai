@@ -2,14 +2,13 @@ const mongoose = require("mongoose");
 
 const { Report, REPORT_STATUS } = require("../models/report.model");
 const { Comment } = require("../models/comment.model");
-const { USER_ROLES } = require("../models/user.model");
-const {
-  createReport: createReportService,
-} = require("../services/report/createReport");
-const {
-  enrichReport,
-} = require("../services/report/enrichReport");
+const { getPriorityScore } = require("../services/trending/aggregation");
+const { createReport: createReportService } = require("../services/report/createReport");
+const { enrichReport } = require("../services/report/enrichReport");
 
+// ─────────────────────────────────────────────────────────────────
+// POST /reports — Create a new report
+// ─────────────────────────────────────────────────────────────────
 async function createReport(req, res) {
   try {
     const { title, description } = req.body || {};
@@ -29,8 +28,9 @@ async function createReport(req, res) {
 
     const report = await createReportService(reportData);
 
-    enrichReport(report._id).catch((error) => {
-      console.error("Report enrichment failed:", error.message);
+    // AI enrichment runs in background — never blocks response
+    enrichReport(report._id).catch((err) => {
+      console.error("Enrichment failed:", err.message);
     });
 
     return res.status(201).json({
@@ -38,8 +38,7 @@ async function createReport(req, res) {
       data: report,
     });
   } catch (err) {
-    console.error("Controller Error:", err);
-
+    console.error("createReport Error:", err);
     return res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -47,18 +46,17 @@ async function createReport(req, res) {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────
+// GET /reports — List reports with filters + pagination
+// ─────────────────────────────────────────────────────────────────
 async function getReports(req, res) {
   try {
-    const page = Math.max(Number.parseInt(req.query.page, 10) || 1, 1);
-    const limit = Math.max(Number.parseInt(req.query.limit, 10) || 20, 1);
+    const page  = Math.max(Number.parseInt(req.query.page,  10) || 1,  1);
+    const limit = Math.min(Number.parseInt(req.query.limit, 10) || 20, 50); // ✅ FIXED: max 50
 
     const filters = {};
-    const filterKeys = ["district", "category", "severity", "status"];
-
-    for (const key of filterKeys) {
-      if (req.query[key]) {
-        filters[key] = req.query[key];
-      }
+    for (const key of ["district", "category", "severity", "status"]) {
+      if (req.query[key]) filters[key] = req.query[key];
     }
 
     const [reports, total] = await Promise.all([
@@ -67,6 +65,7 @@ async function getReports(req, res) {
         .skip((page - 1) * limit)
         .limit(limit)
         .populate("reportedBy", "name")
+        .select("-voterIds")           // ✅ never expose voterIds
         .lean(),
       Report.countDocuments(filters),
     ]);
@@ -81,8 +80,7 @@ async function getReports(req, res) {
       },
     });
   } catch (err) {
-    console.error("Controller Error:", err);
-
+    console.error("getReports Error:", err);
     return res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -90,19 +88,22 @@ async function getReports(req, res) {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────
+// GET /reports/:id — Get single report by _id OR reportId
+// ─────────────────────────────────────────────────────────────────
 async function getReportById(req, res) {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid report ID",
-      });
-    }
+    const { id } = req.params;
 
-    const report = await Report.findById(req.params.id).populate(
-      "reportedBy",
-      "name"
-    ).lean();
+    // ✅ FIXED: accept both MongoDB _id and reportId (JS-2026-XXXX)
+    const query = mongoose.Types.ObjectId.isValid(id)
+      ? { _id: id }
+      : { reportId: id };
+
+    const report = await Report.findOne(query)
+      .populate("reportedBy", "name")
+      .select("-voterIds")             // ✅ never expose voterIds
+      .lean();
 
     if (!report) {
       return res.status(404).json({
@@ -111,13 +112,15 @@ async function getReportById(req, res) {
       });
     }
 
+    // ✅ FIXED: add priorityScore
+    report.priorityScore = getPriorityScore(report);
+
     return res.status(200).json({
       success: true,
       data: report,
     });
   } catch (err) {
-    console.error("Controller Error:", err);
-
+    console.error("getReportById Error:", err);
     return res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -125,15 +128,19 @@ async function getReportById(req, res) {
   }
 }
 
-async function updateStatus(req, res) {
+// ─────────────────────────────────────────────────────────────────
+// PATCH /reports/:id/vote — Toggle vote (vote / unvote)
+// ─────────────────────────────────────────────────────────────────
+async function voteReport(req, res) {
   try {
-    if (req.user?.role !== USER_ROLES.OFFICER) {
-      return res.status(403).json({
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
         success: false,
-        message: "Forbidden",
+        message: "Invalid report ID",
       });
     }
 
+    const userId = (req.user?._id || req.user?.id).toString();
     const report = await Report.findById(req.params.id);
 
     if (!report) {
@@ -143,7 +150,45 @@ async function updateStatus(req, res) {
       });
     }
 
-    const { status, message, officerName } = req.body || {};
+    const alreadyVoted = report.voterIds.some(
+      (v) => v.toString() === userId
+    );
+
+    // ✅ FIXED: toggle — unvote if already voted
+    if (alreadyVoted) {
+      report.voterIds = report.voterIds.filter(
+        (v) => v.toString() !== userId
+      );
+      report.votes = Math.max(0, report.votes - 1);
+    } else {
+      report.voterIds.push(userId);
+      report.votes += 1;
+    }
+
+    await report.save();
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        votes: report.votes,
+        voted: !alreadyVoted,          // ✅ tells frontend current state
+      },
+    });
+  } catch (err) {
+    console.error("voteReport Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// PATCH /reports/:id/status — Update status (officer only)
+// ─────────────────────────────────────────────────────────────────
+async function updateStatus(req, res) {
+  try {
+    const { status, message } = req.body || {};
     const allowedStatuses = Object.values(REPORT_STATUS);
 
     if (!status) {
@@ -156,50 +201,17 @@ async function updateStatus(req, res) {
     if (!allowedStatuses.includes(status)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid status value",
+        message: `Invalid status. Allowed: ${allowedStatuses.join(", ")}`,
       });
     }
 
     if (!message) {
       return res.status(400).json({
         success: false,
-        message: "Message is required",
+        message: "Message is required when updating status",
       });
     }
 
-    report.status = status;
-    report.governmentResponse = {
-      message,
-      officerName,
-      updatedAt: new Date(),
-    };
-
-    const updatedReport = await report.save();
-
-    return res.status(200).json({
-      success: true,
-      data: updatedReport,
-    });
-  } catch (err) {
-    console.error("Controller Error:", err);
-
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
-  }
-}
-
-async function voteReport(req, res) {
-  try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid report ID",
-      });
-    }
-
-    const userId = req.user?._id || req.user?.id;
     const report = await Report.findById(req.params.id);
 
     if (!report) {
@@ -209,30 +221,22 @@ async function voteReport(req, res) {
       });
     }
 
-    const voterIds = report.voterIds || [];
-    const hasAlreadyVoted = voterIds.some(
-      (voterId) => voterId.toString() === String(userId)
-    );
+    report.status = status;
+    report.governmentResponse = {
+      message,
+      officerName: req.user.name,
+      officerId:   req.user._id,       // ✅ audit trail
+      updatedAt:   new Date(),
+    };
 
-    if (hasAlreadyVoted) {
-      return res.status(400).json({
-        success: false,
-        message: "You have already voted for this report",
-      });
-    }
-
-    report.voterIds.push(userId);
-    report.votes += 1;
-
-    const updatedReport = await report.save();
+    const updated = await report.save();
 
     return res.status(200).json({
       success: true,
-      data: updatedReport,
+      data: updated,
     });
   } catch (err) {
-    console.error("Controller Error:", err);
-
+    console.error("updateStatus Error:", err);
     return res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -240,9 +244,12 @@ async function voteReport(req, res) {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────
+// POST /reports/:id/comments — Add comment
+// ─────────────────────────────────────────────────────────────────
 async function addComment(req, res) {
   try {
-    if (!req.body?.text) {
+    if (!req.body?.text?.trim()) {
       return res.status(400).json({
         success: false,
         message: "Comment text is required",
@@ -259,10 +266,10 @@ async function addComment(req, res) {
     }
 
     const comment = await Comment.create({
-      report: req.params.id,
-      user: req.user?._id || req.user?.id,
-      text: req.body?.text,
-      isOfficialResponse: req.user?.role === USER_ROLES.OFFICER,
+      report:             req.params.id,
+      user:               req.user?._id || req.user?.id,
+      text:               req.body.text.trim(),
+      isOfficialResponse: req.user?.role === "officer",
     });
 
     return res.status(201).json({
@@ -270,8 +277,7 @@ async function addComment(req, res) {
       data: comment,
     });
   } catch (err) {
-    console.error("Controller Error:", err);
-
+    console.error("addComment Error:", err);
     return res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -283,7 +289,7 @@ module.exports = {
   createReport,
   getReports,
   getReportById,
-  updateStatus,
   voteReport,
+  updateStatus,
   addComment,
 };

@@ -1,20 +1,36 @@
 const express = require("express");
+
+const {
+  createReport,
+  getReports,
+  getReportById,
+  voteReport,
+  updateStatus,
+  addComment,
+} = require("../../controllers/report.controller");
+
+const { protect }   = require("../../middleware/auth.middleware");
+const { roleGuard } = require("../../middleware/role.middleware");
+const upload        = require("../../middleware/upload.middleware");
+
 const router = express.Router();
 
-const reportController = require("../../controllers/report.controller");
-const upload = require("../../middleware/upload.middleware");
+// ─────────────────────────────────────────────────────────────────
+// PUBLIC — no auth needed
+// ─────────────────────────────────────────────────────────────────
+router.get("/",    getReports);
+router.get("/:id", getReportById);
 
-const { protect } = require("../../middleware/auth.middleware");
-const { roleGuard } = require("../../middleware/role.middleware");
+// ─────────────────────────────────────────────────────────────────
+// CITIZEN — auth required
+// ─────────────────────────────────────────────────────────────────
+router.post("/",          protect, upload, createReport);
+router.patch("/:id/vote", protect, voteReport);          // ✅ PATCH not POST
+router.post("/:id/comments", protect, addComment);
 
-// PUBLIC
-router.get("/", reportController.getReports);
-router.get("/:id", reportController.getReportById);
-
-// PROTECTED
-router.post("/", protect, upload, reportController.createReport);
-router.patch("/:id/status", protect, roleGuard("officer"), reportController.updateStatus);
-router.post("/:id/vote", protect, reportController.voteReport);
-router.post("/:id/comments", protect, reportController.addComment);
+// ─────────────────────────────────────────────────────────────────
+// OFFICER — auth + role required
+// ─────────────────────────────────────────────────────────────────
+router.patch("/:id/status", protect, roleGuard("officer"), updateStatus);
 
 module.exports = router;

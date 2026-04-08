@@ -1,4 +1,4 @@
-function roleGuard(requiredRole) {
+function roleGuard(...allowedRoles) {
   return (req, res, next) => {
     try {
       const userRole = req.user?.role;
@@ -6,21 +6,20 @@ function roleGuard(requiredRole) {
       if (!userRole) {
         return res.status(401).json({
           success: false,
-          message: "Unauthorized",
+          message: "Unauthorized — please log in",
         });
       }
 
-      if (userRole !== requiredRole) {
+      if (!allowedRoles.includes(userRole)) {
         return res.status(403).json({
           success: false,
-          message: "Forbidden: Insufficient permissions",
+          message: "Forbidden — insufficient permissions",
         });
       }
 
       next();
     } catch (err) {
       console.error("RoleGuard Error:", err);
-
       return res.status(500).json({
         success: false,
         message: "Internal server error",

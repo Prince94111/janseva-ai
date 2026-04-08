@@ -21,9 +21,10 @@ const REPORT_SEVERITY = {
 };
 
 const REPORT_STATUS = {
-  PENDING: "pending",
+  PENDING:     "pending",
   IN_PROGRESS: "in_progress",
-  RESOLVED: "resolved",
+  RESOLVED:    "resolved",
+  CLOSED:      "closed",
 };
 
 const UTTARAKHAND_DISTRICTS = [
@@ -59,17 +60,10 @@ const locationSchema = new Schema(
 
 const governmentResponseSchema = new Schema(
   {
-    message: {
-      type: String,
-      trim: true,
-    },
-    officerName: {
-      type: String,
-      trim: true,
-    },
-    updatedAt: {
-      type: Date,
-    },
+    message:     { type: String, trim: true },
+    officerName: { type: String, trim: true },
+    officerId:   { type: Schema.Types.ObjectId, ref: "User" },
+    updatedAt:   { type: Date },
   },
   { _id: false }
 );
