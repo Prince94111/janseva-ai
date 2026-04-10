@@ -25,6 +25,9 @@ export const voteReport    = (id)     => API.patch(`/reports/${id}/vote`);
 export const updateStatus  = (id, data) => API.patch(`/reports/${id}/status`, data);
 export const addComment    = (id, data) => API.post(`/reports/${id}/comments`, data);
 
+// ─── PDF ──────────────────────────────────────────
+export const downloadPDF = (id) => API.get(`/reports/${id}/pdf`, { responseType: "blob" });
+
 // ─── Trending ─────────────────────────────────────
 export const getTrending = (params) => API.get("/trending", { params });
 
@@ -39,5 +42,6 @@ export const getGovStats      = ()       => API.get("/gov/stats");
 export const getPriorityQueue = (params) => API.get("/gov/priority", { params });
 export const getDeptQueue     = (params) => API.get("/gov/department", { params });
 export const postGovResponse  = (id, data) => API.post(`/gov/${id}/response`, data);
+
 
 export default API;

@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import CategoryBadge from '../components/CategoryBadge';
 import SeverityBadge from '../components/SeverityBadge';
-import { getReportById, voteReport, addComment as addCommentAPI } from '../api';
+import { getReportById, voteReport, addComment as addCommentAPI, downloadPDF } from '../api';
 import './ReportDetail.css';
+
 
 const BackIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -109,6 +110,19 @@ export default function ReportDetail() {
       // silent fail
     } finally {
       setPosting(false);
+    }
+  };
+  const onDownloadPDF = async () => {
+  try {
+    const res = await downloadPDF(report._id);
+    const url = window.URL.createObjectURL(new Blob([res.data]));
+    const a   = document.createElement("a");
+    a.href     = url;
+    a.download = `JanSeva-${report.reportId}.pdf`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+    } catch {
+    alert("PDF generation failed. Please try again.");
     }
   };
 
@@ -219,9 +233,19 @@ export default function ReportDetail() {
             <UpIcon />
             <span>{upvoted ? `${voteCount} · Supported` : `${voteCount} Upvotes`}</span>
           </button>
+
           <button className="rd-action-btn" onClick={onShare}>
             <ShareIcon />
             <span>Share</span>
+          </button>
+
+          <button className="rd-action-btn" onClick={onDownloadPDF}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            <span>PDF</span>
           </button>
         </div>
 

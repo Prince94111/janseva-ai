@@ -1,4 +1,5 @@
 const express = require("express");
+const router = express.Router(); // ✅ Keep this one only
 
 const {
   createReport,
@@ -9,28 +10,23 @@ const {
   addComment,
 } = require("../../controllers/report.controller");
 
+const { downloadReportPDF } = require("../../controllers/pdf.controller");
+
 const { protect }   = require("../../middleware/auth.middleware");
 const { roleGuard } = require("../../middleware/role.middleware");
 const upload        = require("../../middleware/upload.middleware");
 
-const router = express.Router();
+// PUBLIC
+router.get("/",        getReports);
+router.get("/:id/pdf", downloadReportPDF);
+router.get("/:id",     getReportById);
 
-// ─────────────────────────────────────────────────────────────────
-// PUBLIC — no auth needed
-// ─────────────────────────────────────────────────────────────────
-router.get("/",    getReports);
-router.get("/:id", getReportById);
-
-// ─────────────────────────────────────────────────────────────────
-// CITIZEN — auth required
-// ─────────────────────────────────────────────────────────────────
-router.post("/",          protect, upload, createReport);
-router.patch("/:id/vote", protect, voteReport);          // ✅ PATCH not POST
+// CITIZEN
+router.post("/",             protect, upload, createReport);
+router.patch("/:id/vote",    protect, voteReport);
 router.post("/:id/comments", protect, addComment);
 
-// ─────────────────────────────────────────────────────────────────
-// OFFICER — auth + role required
-// ─────────────────────────────────────────────────────────────────
+// OFFICER
 router.patch("/:id/status", protect, roleGuard("officer"), updateStatus);
 
 module.exports = router;
