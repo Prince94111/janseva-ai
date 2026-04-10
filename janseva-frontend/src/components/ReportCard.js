@@ -41,6 +41,7 @@ export default function ReportCard({ report, compact = false }) {
   // ✅ FIXED: map API fields to component fields
   const {
     _id,
+    // eslint-disable-next-line no-unused-vars
     reportId,
     category,
     severity,

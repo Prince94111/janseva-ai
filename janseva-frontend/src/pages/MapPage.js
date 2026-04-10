@@ -30,9 +30,10 @@ const FILTER_MAP = {
 // Uttarakhand center
 const UK_CENTER = [30.0668, 79.0193];
 const UK_ZOOM   = 8;
-
+// eslint-disable-next-line no-unused-vars
 function RecenterMap({ center }) {
   const map = useMap();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { map.setView(center, UK_ZOOM); }, [center]);
   return null;
 }

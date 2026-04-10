@@ -34,6 +34,7 @@ export default function GovDashboard() {
   const [loading,    setLoading]    = useState(true);
   const [updating,   setUpdating]   = useState(null); // reportId being updated
 
+  // eslint-disable-next-line no-unused-vars
   const token = localStorage.getItem('token');
 
   // ── Fetch stats + queue on mount ──────────────────────────────
