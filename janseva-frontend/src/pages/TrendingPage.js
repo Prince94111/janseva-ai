@@ -1,34 +1,62 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ReportCard from '../components/ReportCard';
-import { ALL_REPORTS } from '../data/sampleData';
+import { getTrending, getReports } from '../api';
 import './TrendingPage.css';
 
-const WINDOWS = ['Today', '7 Days', '30 Days'];
-
-const DISTRICTS = [
-  { name: 'Rudraprayag',   count: 14, delta: '+6', reason: 'Road collapses after heavy rain',  severity: 'severe' },
-  { name: 'Pauri Garhwal', count: 11, delta: '+3', reason: 'Wildlife incidents increasing',     severity: 'moderate' },
-  { name: 'Tehri Garhwal', count: 9,  delta: '+4', reason: 'Yatra season surge',               severity: 'severe' },
-  { name: 'Chamoli',       count: 7,  delta: '+2', reason: 'Permit system failures',            severity: 'moderate' },
-  { name: 'Haridwar',      count: 6,  delta: '+1', reason: 'Tourist overcrowding',              severity: 'moderate' },
-  { name: 'Uttarkashi',    count: 4,  delta: '+1', reason: 'Road damage post-monsoon',          severity: 'minor' },
+const WINDOWS = [
+  { label: 'Today',   days: 1  },
+  { label: '7 Days',  days: 7  },
+  { label: '30 Days', days: 30 },
 ];
 
-const MAX = Math.max(...DISTRICTS.map(d => d.count));
-
-const SEV_COLOR = { severe: '#DC2626', moderate: '#CA8A04', minor: '#16A34A' };
+const SEV_COLOR = {
+  critical: '#DC2626',
+  high:     '#EA580C',
+  medium:   '#CA8A04',
+  low:      '#16A34A',
+};
 
 const WHY_TRENDING = [
-  { emoji: '🌧️', title: 'Monsoon impact', desc: 'Heavy rainfall in last 48h causing road damage across Garhwal division.' },
-  { emoji: '🛕', title: 'Yatra season peak', desc: 'Char Dham yatra peak period — 40% more civic reports than off-season.' },
-  { emoji: '📱', title: 'Awareness surge', desc: 'JanSeva AI social campaign driving 3x more report submissions.' },
+  { emoji: '🌧️', title: 'Monsoon impact',    desc: 'Heavy rainfall causing road damage across Garhwal division.' },
+  { emoji: '🛕', title: 'Yatra season peak', desc: 'Char Dham yatra peak — 40% more civic reports than off-season.' },
+  { emoji: '📱', title: 'Awareness surge',   desc: 'JanSeva AI driving 3x more report submissions this week.' },
 ];
 
 export default function TrendingPage() {
-  const [window_, setWindow] = useState('Today');
+  const [activeWindow,     setActiveWindow]     = useState(WINDOWS[1]); // default 7 Days
+  const [districts,        setDistricts]        = useState([]);
+  const [topReports,       setTopReports]       = useState([]);
   const [selectedDistrict, setSelectedDistrict] = useState(null);
+  const [loading,          setLoading]          = useState(true);
 
-  const sorted = [...ALL_REPORTS].sort((a, b) => b.votes - a.votes);
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [trendingRes, reportsRes] = await Promise.all([
+          getTrending({ period: activeWindow.days, limit: 13 }),
+          getReports({ limit: 10 }),
+        ]);
+        setDistricts(trendingRes.data.data   || []);
+        setTopReports(reportsRes.data.data.reports || []);
+      } catch (err) {
+        console.error("Trending fetch failed:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [activeWindow]);
+
+  const max = Math.max(...districts.map(d => d.totalReports), 1);
+
+  // Map priority score to severity color
+  const getColor = (d, i) => {
+    if (i === 0) return SEV_COLOR.critical;
+    if (i === 1) return SEV_COLOR.high;
+    if (i <= 3)  return SEV_COLOR.medium;
+    return SEV_COLOR.low;
+  };
 
   return (
     <main className="page-content">
@@ -36,20 +64,20 @@ export default function TrendingPage() {
         <h1 className="text-page-title">Trending</h1>
       </div>
 
-      {/* Time tabs */}
+      {/* Time window tabs */}
       <div className="filter-bar">
         {WINDOWS.map(w => (
           <button
-            key={w}
-            className={`filter-pill ${window_ === w ? 'active' : ''}`}
-            onClick={() => setWindow(w)}
+            key={w.label}
+            className={`filter-pill ${activeWindow.label === w.label ? 'active' : ''}`}
+            onClick={() => setActiveWindow(w)}
           >
-            {w}
+            {w.label}
           </button>
         ))}
       </div>
 
-      {/* Why trending section */}
+      {/* Why trending */}
       <div className="why-section">
         <p className="section-label" style={{ padding: '12px 20px 8px' }}>Why it's trending</p>
         <div className="why-cards">
@@ -67,43 +95,64 @@ export default function TrendingPage() {
 
       {/* District ranking */}
       <p className="section-label">By District</p>
-      <div className="district-list">
-        {DISTRICTS.map((d, i) => (
-          <div
-            key={d.name}
-            className={`district-row ${selectedDistrict === d.name ? 'active' : ''}`}
-            onClick={() => setSelectedDistrict(d.name === selectedDistrict ? null : d.name)}
-          >
-            <div className="district-row-top">
-              <div className="district-left">
-                <span className="district-rank">#{i + 1}</span>
-                <div>
-                  <span className="district-name">{d.name}</span>
-                  {selectedDistrict === d.name && (
-                    <p className="district-reason">↳ {d.reason}</p>
-                  )}
+      {loading ? (
+        <div className="empty-state">Loading districts...</div>
+      ) : districts.length === 0 ? (
+        <div className="empty-state">No trending data for this period.</div>
+      ) : (
+        <div className="district-list">
+          {districts.map((d, i) => (
+            <div
+              key={d.district}
+              className={`district-row ${selectedDistrict === d.district ? 'active' : ''}`}
+              onClick={() => setSelectedDistrict(d.district === selectedDistrict ? null : d.district)}
+            >
+              <div className="district-row-top">
+                <div className="district-left">
+                  <span className="district-rank">#{i + 1}</span>
+                  <div>
+                    <span className="district-name">{d.district}</span>
+                    {selectedDistrict === d.district && (
+                      <p className="district-reason">
+                        ↳ Top issue: {d.topCategory?.replace(/_/g, ' ')} · Priority score: {d.priorityScore}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="district-right">
+                  <span className="district-delta" style={{ color: getColor(d, i) }}>
+                    {d.totalReports} report{d.totalReports !== 1 ? 's' : ''}
+                  </span>
+                  <span className="district-count">{d.priorityScore}</span>
                 </div>
               </div>
-              <div className="district-right">
-                <span className="district-delta" style={{ color: SEV_COLOR[d.severity] }}>{d.delta} today</span>
-                <span className="district-count">{d.count}</span>
+              {/* Progress bar based on totalReports */}
+              <div className="district-bar-track">
+                <div
+                  className="district-bar-fill"
+                  style={{
+                    width:      `${(d.totalReports / max) * 100}%`,
+                    background: getColor(d, i),
+                  }}
+                />
               </div>
             </div>
-            <div className="district-bar-track">
-              <div
-                className="district-bar-fill"
-                style={{ width: `${(d.count / MAX) * 100}%`, background: SEV_COLOR[d.severity] }}
-              />
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
-      {/* Most upvoted */}
+      {/* Most upvoted reports */}
       <p className="section-label">Most Upvoted Reports</p>
-      <div className="feed">
-        {sorted.map(r => <ReportCard key={r.id} report={r} />)}
-      </div>
+      {loading ? (
+        <div className="empty-state">Loading reports...</div>
+      ) : (
+        <div className="feed">
+          {topReports.length > 0
+            ? topReports.map(r => <ReportCard key={r._id} report={r} />)
+            : <div className="empty-state">No reports yet.</div>
+          }
+        </div>
+      )}
     </main>
   );
 }

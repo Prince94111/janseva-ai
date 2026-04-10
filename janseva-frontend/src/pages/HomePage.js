@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ReportCard from '../components/ReportCard';
-import { SAMPLE_REPORTS, CLUSTERS } from '../data/sampleData';
+import { getReports, getTrending } from '../api';
 import './HomePage.css';
 
-const FILTERS = ['All', 'Severe', 'Road', 'Safety', 'Wildlife', 'Near Me'];
+const FILTERS = ['All', 'Severe', 'Road', 'Safety', 'Wildlife'];
 
 const WarnIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -12,27 +12,54 @@ const WarnIcon = () => (
   </svg>
 );
 
-const LinkIcon = () => (
-  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-  </svg>
-);
+const FILTER_MAP = {
+  Severe:   { severity: 'critical' },
+  Road:     { category: 'road_damage' },
+  Safety:   { category: 'women_safety' },
+  Wildlife: { category: 'wildlife' },
+};
 
 export default function HomePage() {
-  const [active, setActive] = useState('All');
+  const [active, setActive]       = useState('All');
+  const [reports, setReports]     = useState([]);
+  const [trending, setTrending]   = useState(null);
+  const [stats, setStats]         = useState({ total: 0, resolved: 0, votes: 0, severe: 0 });
+  const [loading, setLoading]     = useState(true);
+  const [error, setError]         = useState(null);
 
-  const filtered = SAMPLE_REPORTS.filter(r => {
-    if (active === 'All')      return true;
-    if (active === 'Severe')   return r.severity === 'severe';
-    if (active === 'Road')     return r.category === 'Road Damage';
-    if (active === 'Safety')   return r.category === 'Women Safety';
-    if (active === 'Wildlife') return r.category === 'Wild Animal';
-    return true;
-  });
+  // Fetch reports when filter changes
+  useEffect(() => {
+    const fetchReports = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const params = FILTER_MAP[active] || {};
+        const res = await getReports({ ...params, limit: 50 });
+        const data = res.data.data.reports;
+        setReports(data);
 
-  const severeCount = SAMPLE_REPORTS.filter(r => r.severity === 'severe').length;
-  const cluster     = CLUSTERS[0]; // primary cluster to highlight
+        // Compute stats from response
+        const severe   = data.filter(r => r.severity === 'critical').length;
+        const resolved = data.filter(r => r.status === 'resolved').length;
+        const votes    = data.reduce((sum, r) => sum + (r.votes || 0), 0);
+        setStats({ total: res.data.data.total, resolved, votes, severe });
+      } catch (err) {
+        setError("Failed to load reports");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchReports();
+  }, [active]);
+
+  // Fetch trending district once on mount
+  useEffect(() => {
+    getTrending({ period: 7, limit: 1 })
+      .then(res => {
+        if (res.data.data.length > 0) setTrending(res.data.data[0]);
+      })
+      .catch(() => {}); // non-critical, silent fail
+  }, []);
 
   return (
     <main className="page-content">
@@ -45,18 +72,24 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* System Insight Banner */}
-      <div className="insight-banner">
-        <div className="insight-banner-icon"><WarnIcon /></div>
-        <div className="insight-banner-body">
-          <p className="insight-banner-title">High risk cluster detected near Devprayag</p>
-          <p className="insight-banner-sub">3 related incidents in last 24h · Likely due to rainfall on NH-58</p>
+      {/* Trending Banner — shows top trending district */}
+      {trending && (
+        <div className="insight-banner">
+          <div className="insight-banner-icon"><WarnIcon /></div>
+          <div className="insight-banner-body">
+            <p className="insight-banner-title">
+              High activity in {trending.district}
+            </p>
+            <p className="insight-banner-sub">
+              {trending.totalReports} reports · Top issue: {trending.topCategory?.replace('_', ' ')}
+            </p>
+          </div>
+          <div className="insight-banner-count">
+            <span className="insight-count-num">{trending.priorityScore}</span>
+            <span className="insight-count-label">priority</span>
+          </div>
         </div>
-        <div className="insight-banner-count">
-          <span className="insight-count-num">{severeCount}</span>
-          <span className="insight-count-label">severe</span>
-        </div>
-      </div>
+      )}
 
       {/* Filter bar */}
       <div className="filter-bar">
@@ -74,58 +107,42 @@ export default function HomePage() {
       {/* Stats bar */}
       <div className="stats-bar">
         <div className="stat-item">
-          <span className="stat-num">{SAMPLE_REPORTS.length}</span>
+          <span className="stat-num">{stats.total}</span>
           <span className="stat-label">open</span>
         </div>
         <div className="stat-sep" />
         <div className="stat-item">
-          <span className="stat-num" style={{ color: 'var(--accent)' }}>2</span>
-          <span className="stat-label">resolved today</span>
+          <span className="stat-num" style={{ color: 'var(--accent)' }}>{stats.resolved}</span>
+          <span className="stat-label">resolved</span>
         </div>
         <div className="stat-sep" />
         <div className="stat-item">
-          <span className="stat-num">847</span>
+          <span className="stat-num">{stats.votes}</span>
           <span className="stat-label">total votes</span>
         </div>
         <div className="stat-sep" />
         <div className="stat-item">
-          <span className="stat-num" style={{ color: '#DC2626' }}>{severeCount}</span>
+          <span className="stat-num" style={{ color: '#DC2626' }}>{stats.severe}</span>
           <span className="stat-label">severe</span>
         </div>
       </div>
 
-      {/* Cluster section — shown on All filter */}
-      {active === 'All' && cluster && (
-        <div className="cluster-section">
-          <div className="cluster-header">
-            <div className="cluster-header-left">
-              <LinkIcon />
-              <span className="cluster-label">Cluster · {cluster.label}</span>
-            </div>
-            <span className="cluster-reason">{cluster.reason}</span>
-          </div>
-          {SAMPLE_REPORTS
-            .filter(r => cluster.reportIds.includes(r.id))
-            .map(r => <ReportCard key={r.id} report={r} />)
-          }
+      {/* Feed */}
+      {loading ? (
+        <div className="empty-state">Loading reports...</div>
+      ) : error ? (
+        <div className="empty-state" style={{ color: '#DC2626' }}>{error}</div>
+      ) : (
+        <div className="feed">
+          {reports.map(r => (
+            <ReportCard key={r._id} report={r} />
+          ))}
+          {reports.length === 0 && (
+            <div className="empty-state">No reports matching this filter.</div>
+          )}
         </div>
       )}
 
-      {/* Divider label for remaining */}
-      {active === 'All' && (
-        <p className="section-label">Other Reports</p>
-      )}
-
-      {/* Feed */}
-      <div className="feed">
-        {filtered
-          .filter(r => active !== 'All' || !cluster.reportIds.includes(r.id))
-          .map(r => <ReportCard key={r.id} report={r} />)
-        }
-        {filtered.length === 0 && (
-          <div className="empty-state">No reports matching this filter.</div>
-        )}
-      </div>
     </main>
   );
 }

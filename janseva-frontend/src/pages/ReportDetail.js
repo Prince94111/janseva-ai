@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import CategoryBadge from '../components/CategoryBadge';
 import SeverityBadge from '../components/SeverityBadge';
-import { ALL_REPORTS, CLUSTERS } from '../data/sampleData';
+import { getReportById, voteReport, addComment as addCommentAPI } from '../api';
 import './ReportDetail.css';
 
 const BackIcon = () => (
@@ -29,57 +29,119 @@ const ShareIcon = () => (
 );
 
 const STATUS_META = {
-  open:       { color: '#E8A020', label: 'Open' },
-  inprogress: { color: '#0891B2', label: 'In Progress' },
-  resolved:   { color: '#16A34A', label: 'Resolved' },
+  pending:     { color: '#E8A020', label: 'Pending' },
+  in_progress: { color: '#0891B2', label: 'In Progress' },
+  resolved:    { color: '#16A34A', label: 'Resolved' },
+  closed:      { color: '#6B7280', label: 'Closed' },
 };
 
-const COMMENTS_SEED = [
-  { id: 1, author: 'Priya M.',      time: '1h ago',  text: 'Confirmed — I drive this route daily. The damage is exactly as described. Two tyre blowouts near this spot already.', official: false },
-  { id: 2, author: 'District PWD',  time: '2h ago',  text: 'Report received. Assessment team has been scheduled for tomorrow morning. Thank you for flagging this.', official: true },
-  { id: 3, author: 'Rahul S.',      time: '3h ago',  text: 'Reported to PWD helpline as well. They said "3 days". Please escalate further.', official: false },
-];
+function timeAgo(dateStr) {
+  if (!dateStr) return '';
+  const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
+  if (diff < 60)    return `${diff}s ago`;
+  if (diff < 3600)  return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
+}
 
 export default function ReportDetail() {
   const { id } = useParams();
-  const report = ALL_REPORTS.find(r => r.id === id) || ALL_REPORTS[0];
-  const cluster = CLUSTERS.find(c => c.id === report.clusterId);
 
-  const [upvoted, setUpvoted] = useState(false);
-  const [voteCount, setVoteCount] = useState(report.votes);
-  const [comments, setComments] = useState(COMMENTS_SEED);
+  const [report,      setReport]      = useState(null);
+  const [loading,     setLoading]     = useState(true);
+  const [error,       setError]       = useState(null);
+  const [upvoted,     setUpvoted]     = useState(false);
+  const [voteCount,   setVoteCount]   = useState(0);
+  const [comments,    setComments]    = useState([]);
   const [commentText, setCommentText] = useState('');
+  const [posting,     setPosting]     = useState(false);
 
-  const statusMeta = STATUS_META[report.status] || STATUS_META.open;
+  const token = localStorage.getItem("token");
 
-  const addComment = () => {
-    if (!commentText.trim()) return;
-    setComments(prev => [{ id: Date.now(), author: 'You', time: 'just now', text: commentText, official: false }, ...prev]);
-    setCommentText('');
+  useEffect(() => {
+    const fetch = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await getReportById(id);
+        const r   = res.data.data;
+        setReport(r);
+        setVoteCount(r.votes || 0);
+      } catch {
+        setError("Report not found");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetch();
+  }, [id]);
+
+  const onVote = async (e) => {
+    e.preventDefault();
+    if (!token || !report) return;
+
+    const wasUpvoted = upvoted;
+    setUpvoted(v => !v);
+    setVoteCount(c => wasUpvoted ? c - 1 : c + 1);
+
+    try {
+      const res = await voteReport(report._id);
+      setVoteCount(res.data.data.votes);
+      setUpvoted(res.data.data.voted);
+    } catch {
+      setUpvoted(wasUpvoted);
+      setVoteCount(c => wasUpvoted ? c + 1 : c - 1);
+    }
   };
+
+  const onShare = () => {
+    navigator.clipboard?.writeText(window.location.href);
+  };
+
+  const onAddComment = async () => {
+    if (!commentText.trim() || !token) return;
+    setPosting(true);
+    try {
+      const res = await addCommentAPI(report._id, { text: commentText.trim() });
+      setComments(prev => [res.data.data, ...prev]);
+      setCommentText('');
+    } catch {
+      // silent fail
+    } finally {
+      setPosting(false);
+    }
+  };
+
+  // ── Loading / Error states ──────────────────────────────────────
+  if (loading) return (
+    <main className="page-content">
+      <div className="empty-state">Loading report...</div>
+    </main>
+  );
+
+  if (error || !report) return (
+    <main className="page-content">
+      <div className="rd-back-bar">
+        <Link to="/" className="rd-back-btn"><BackIcon /> Reports</Link>
+      </div>
+      <div className="empty-state" style={{ color: '#DC2626' }}>
+        {error || "Report not found"}
+      </div>
+    </main>
+  );
+
+  const statusMeta = STATUS_META[report.status] || STATUS_META.pending;
+  const imageUrl   = report.photos?.[0] || null;
 
   return (
     <main className="page-content">
 
       {/* Back */}
       <div className="rd-back-bar">
-        <Link to="/" className="rd-back-btn">
-          <BackIcon /> Reports
-        </Link>
+        <Link to="/" className="rd-back-btn"><BackIcon /> Reports</Link>
       </div>
 
       <div className="rd-body">
-
-        {/* AI Cluster insight — shown if report is part of cluster */}
-        {cluster && (
-          <div className="rd-cluster-banner">
-            <span className="rd-cluster-icon">🔗</span>
-            <div>
-              <p className="rd-cluster-title">Part of a detected cluster</p>
-              <p className="rd-cluster-sub">{cluster.label} · {cluster.reason}</p>
-            </div>
-          </div>
-        )}
 
         {/* Badges + status */}
         <div className="rd-badges">
@@ -89,7 +151,9 @@ export default function ReportDetail() {
             {statusMeta.label}
           </span>
           {report.aiConfidence && (
-            <span className="rd-confidence">🤖 {report.aiConfidence}% confidence</span>
+            <span className="rd-confidence">
+              🤖 {Math.round(report.aiConfidence * 100)}% confidence
+            </span>
           )}
         </div>
 
@@ -98,27 +162,49 @@ export default function ReportDetail() {
 
         {/* Meta */}
         <div className="rd-meta">
-          <span className="rd-loc"><LocIcon />{report.location}</span>
-          <span className="rd-time">{report.timestamp}</span>
+          <span className="rd-loc"><LocIcon />{report.district}</span>
+          <span className="rd-time">{timeAgo(report.createdAt)}</span>
+          <span className="rd-time" style={{ opacity: 0.5 }}>{report.reportId}</span>
         </div>
 
-        {/* Impact */}
-        {report.impact && (
-          <div className="rd-impact-row">
-            <span className="rd-impact-label">Impact</span>
-            <span className="rd-impact-val">{report.impact}</span>
+        {/* AI Insights */}
+        {report.aiInsights && (
+          <div className="rd-cluster-banner">
+            <span className="rd-cluster-icon">🤖</span>
+            <div>
+              <p className="rd-cluster-title">AI Analysis</p>
+              <p className="rd-cluster-sub">{report.aiInsights}</p>
+            </div>
           </div>
         )}
 
         {/* Image */}
-        {report.imageUrl && (
+        {imageUrl && (
           <div className="rd-img-wrap">
-            <img src={report.imageUrl} alt={report.title} className="rd-img" />
+            <img src={imageUrl} alt={report.title} className="rd-img" />
           </div>
         )}
 
         {/* Description */}
         <p className="rd-desc">{report.description}</p>
+
+        {/* Suggested Department */}
+        {report.suggestedDepartment && (
+          <div className="rd-impact-row">
+            <span className="rd-impact-label">Department</span>
+            <span className="rd-impact-val">{report.suggestedDepartment}</span>
+          </div>
+        )}
+
+        {/* Priority Score */}
+        {report.priorityScore !== undefined && (
+          <div className="rd-impact-row">
+            <span className="rd-impact-label">Priority Score</span>
+            <span className="rd-impact-val" style={{ color: 'var(--accent)', fontWeight: 600 }}>
+              {report.priorityScore}
+            </span>
+          </div>
+        )}
 
         <div className="divider" />
 
@@ -126,12 +212,14 @@ export default function ReportDetail() {
         <div className="rd-actions">
           <button
             className={`rd-action-btn ${upvoted ? 'upvoted' : ''}`}
-            onClick={() => { setUpvoted(v => { setVoteCount(c => v ? c - 1 : c + 1); return !v; }); }}
+            onClick={onVote}
+            disabled={!token}
+            title={token ? 'Support this report' : 'Login to vote'}
           >
             <UpIcon />
-            <span>{upvoted ? voteCount + ' · Supported' : voteCount + ' Upvotes'}</span>
+            <span>{upvoted ? `${voteCount} · Supported` : `${voteCount} Upvotes`}</span>
           </button>
-          <button className="rd-action-btn">
+          <button className="rd-action-btn" onClick={onShare}>
             <ShareIcon />
             <span>Share</span>
           </button>
@@ -139,38 +227,33 @@ export default function ReportDetail() {
 
         <div className="divider" />
 
-        {/* Timeline */}
-        <div className="rd-section">
-          <p className="rd-section-label">Government Response</p>
-          <div className="rd-timeline">
-            <div className="rd-tl-item">
-              <div className="rd-tl-dot official" />
-              <div className="rd-tl-line" />
-              <div className="rd-tl-content">
-                <p className="rd-tl-author">District PWD Office</p>
-                <p className="rd-tl-text">Assessment team scheduled for tomorrow morning.</p>
-                <p className="rd-tl-time">2h ago</p>
+        {/* Government Response Timeline */}
+        {report.governmentResponse && (
+          <div className="rd-section">
+            <p className="rd-section-label">Government Response</p>
+            <div className="rd-timeline">
+              <div className="rd-tl-item">
+                <div className="rd-tl-dot official" />
+                <div className="rd-tl-line" />
+                <div className="rd-tl-content">
+                  <p className="rd-tl-author">
+                    {report.governmentResponse.officerName || 'Government Officer'}
+                  </p>
+                  <p className="rd-tl-text">{report.governmentResponse.message}</p>
+                  <p className="rd-tl-time">{timeAgo(report.governmentResponse.updatedAt)}</p>
+                </div>
               </div>
-            </div>
-            <div className="rd-tl-item">
-              <div className="rd-tl-dot system" />
-              <div className="rd-tl-line" />
-              <div className="rd-tl-content">
-                <p className="rd-tl-author">JanSeva AI</p>
-                <p className="rd-tl-text">Report forwarded to PWD Uttarakhand and District Collector's office. AI confidence: {report.aiConfidence}%.</p>
-                <p className="rd-tl-time">3h ago</p>
-              </div>
-            </div>
-            <div className="rd-tl-item">
-              <div className="rd-tl-dot" />
-              <div className="rd-tl-content">
-                <p className="rd-tl-author">System</p>
-                <p className="rd-tl-text">Report filed and verified.</p>
-                <p className="rd-tl-time">{report.timestamp}</p>
+              <div className="rd-tl-item">
+                <div className="rd-tl-dot" />
+                <div className="rd-tl-content">
+                  <p className="rd-tl-author">System</p>
+                  <p className="rd-tl-text">Report filed · {report.reportId}</p>
+                  <p className="rd-tl-time">{timeAgo(report.createdAt)}</p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
 
         <div className="divider" />
 
@@ -178,36 +261,45 @@ export default function ReportDetail() {
         <div className="rd-section">
           <p className="rd-section-label">{comments.length} Comments</p>
 
-          <div className="rd-comment-input-row">
-            <input
-              className="rd-comment-input"
-              placeholder="Add a comment..."
-              value={commentText}
-              onChange={e => setCommentText(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && addComment()}
-            />
-            <button
-              className="rd-comment-post"
-              onClick={addComment}
-              disabled={!commentText.trim()}
-            >
-              Post
-            </button>
-          </div>
+          {token ? (
+            <div className="rd-comment-input-row">
+              <input
+                className="rd-comment-input"
+                placeholder="Add a comment..."
+                value={commentText}
+                onChange={e => setCommentText(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && onAddComment()}
+              />
+              <button
+                className="rd-comment-post"
+                onClick={onAddComment}
+                disabled={!commentText.trim() || posting}
+              >
+                {posting ? '...' : 'Post'}
+              </button>
+            </div>
+          ) : (
+            <p style={{ fontSize: '13px', opacity: 0.5, marginBottom: '12px' }}>
+              Login to comment
+            </p>
+          )}
 
           <div className="rd-comment-list">
-            {comments.map(c => (
-              <div key={c.id} className={`rd-comment ${c.official ? 'official' : ''}`}>
+            {comments.map((c, i) => (
+              <div key={c._id || i} className={`rd-comment ${c.isOfficialResponse ? 'official' : ''}`}>
                 <div className="rd-comment-hdr">
                   <span className="rd-comment-author">
-                    {c.author}
-                    {c.official && <span className="rd-official-tag">Official</span>}
+                    {c.user?.name || 'User'}
+                    {c.isOfficialResponse && <span className="rd-official-tag">Official</span>}
                   </span>
-                  <span className="rd-comment-time">{c.time}</span>
+                  <span className="rd-comment-time">{timeAgo(c.createdAt)}</span>
                 </div>
                 <p className="rd-comment-text">{c.text}</p>
               </div>
             ))}
+            {comments.length === 0 && (
+              <p style={{ fontSize: '13px', opacity: 0.4 }}>No comments yet.</p>
+            )}
           </div>
         </div>
 

@@ -1,42 +1,79 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet';
+import { getMarkers, getTrending } from '../api';
 import './MapPage.css';
 
-const MARKERS = [
-  { id: '1', x: 52, y: 38, label: 'Devprayag', severity: 'severe',   count: 3, category: 'Road Damage' },
-  { id: '2', x: 44, y: 28, label: 'Rishikesh',  severity: 'severe',   count: 5, category: 'Women Safety' },
-  { id: '3', x: 40, y: 24, label: 'Haridwar',   severity: 'minor',    count: 2, category: 'Pilgrimage' },
-  { id: '4', x: 55, y: 22, label: 'Mussoorie',  severity: 'moderate', count: 2, category: 'Road Damage' },
-  { id: '5', x: 46, y: 44, label: 'Shivpuri',   severity: 'moderate', count: 3, category: 'Tourist Crowd' },
-  { id: '6', x: 60, y: 52, label: 'Rudraprayag',severity: 'severe',   count: 4, category: 'Road Damage' },
-  { id: '7', x: 34, y: 36, label: 'Lansdowne',  severity: 'moderate', count: 1, category: 'Wild Animal' },
-  { id: '8', x: 65, y: 34, label: 'Chamoli',    severity: 'moderate', count: 2, category: 'Tourist Crowd' },
-  { id: '9', x: 70, y: 58, label: 'Kedarnath',  severity: 'severe',   count: 4, category: 'Road Damage' },
-];
+const SEV_COLOR = {
+  critical: '#DC2626',
+  high:     '#EA580C',
+  medium:   '#CA8A04',
+  low:      '#16A34A',
+};
 
-const SEV_COLOR = { severe: '#DC2626', moderate: '#CA8A04', minor: '#16A34A' };
+const SEV_RADIUS = {
+  critical: 14,
+  high:     11,
+  medium:   8,
+  low:      6,
+};
 
-const FILTERS = ['All', 'Severe', 'Road Damage', 'Women Safety', 'Tourist Crowd'];
+const FILTERS = ['All', 'Critical', 'High', 'Road', 'Safety', 'Wildlife'];
 
-const LEGEND = [
-  { color: '#DC2626', label: 'Severe' },
-  { color: '#CA8A04', label: 'Moderate' },
-  { color: '#16A34A', label: 'Minor' },
-];
+const FILTER_MAP = {
+  Critical: (m) => m.severity === 'critical',
+  High:     (m) => m.severity === 'high' || m.severity === 'critical',
+  Road:     (m) => m.category === 'road_damage',
+  Safety:   (m) => m.category === 'women_safety',
+  Wildlife: (m) => m.category === 'wildlife',
+};
+
+// Uttarakhand center
+const UK_CENTER = [30.0668, 79.0193];
+const UK_ZOOM   = 8;
+
+function RecenterMap({ center }) {
+  const map = useMap();
+  useEffect(() => { map.setView(center, UK_ZOOM); }, [center]);
+  return null;
+}
 
 export default function MapPage() {
+  const [markers,  setMarkers]  = useState([]);
+  const [trending, setTrending] = useState([]);
+  const [filter,   setFilter]   = useState('All');
   const [selected, setSelected] = useState(null);
-  const [filter, setFilter] = useState('All');
+  const [loading,  setLoading]  = useState(true);
 
-  const visible = MARKERS.filter(m => {
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [markersRes, trendingRes] = await Promise.all([
+          getMarkers(),
+          getTrending({ period: 7, limit: 13 }),
+        ]);
+        setMarkers(markersRes.data.data   || []);
+        setTrending(trendingRes.data.data || []);
+      } catch (err) {
+        console.error("Map fetch failed:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const visible = markers.filter(m => {
     if (filter === 'All') return true;
-    if (filter === 'Severe') return m.severity === 'severe';
-    return m.category === filter;
+    return FILTER_MAP[filter]?.(m) ?? true;
   });
 
-  const sel = MARKERS.find(m => m.id === selected);
+  const severeCount = markers.filter(m => m.severity === 'critical').length;
 
   return (
     <main className="page-content">
+
+      {/* Header */}
       <div className="page-header">
         <div className="map-hdr">
           <h1 className="text-page-title">Map View</h1>
@@ -60,152 +97,133 @@ export default function MapPage() {
         ))}
       </div>
 
-      {/* Map container */}
-      <div className="map-wrap">
-        {/* SVG map */}
-        <svg className="map-svg" viewBox="0 0 100 80" preserveAspectRatio="xMidYMid meet">
-          {/* Background terrain suggestion */}
-          <defs>
-            <radialGradient id="heatRed" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#DC2626" stopOpacity="0.18"/>
-              <stop offset="100%" stopColor="#DC2626" stopOpacity="0"/>
-            </radialGradient>
-            <radialGradient id="heatAmber" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#CA8A04" stopOpacity="0.14"/>
-              <stop offset="100%" stopColor="#CA8A04" stopOpacity="0"/>
-            </radialGradient>
-          </defs>
-
-          {/* Uttarakhand rough outline */}
-          <path
-            d="M20,15 Q30,10 45,12 Q58,8 72,14 Q82,18 88,28 Q92,38 88,50 Q84,62 76,68 Q66,74 55,72 Q44,74 34,68 Q24,62 18,52 Q12,42 14,30 Q16,22 20,15 Z"
-            fill="rgba(255,255,255,0.03)"
-            stroke="rgba(255,255,255,0.08)"
-            strokeWidth="0.4"
-          />
-
-          {/* River suggestion */}
-          <path d="M44,12 Q46,28 46,44 Q47,58 52,70" fill="none" stroke="rgba(8,145,178,0.25)" strokeWidth="0.6" strokeDasharray="1,1"/>
-          <path d="M60,8 Q58,24 54,38 Q52,50 52,70" fill="none" stroke="rgba(8,145,178,0.18)" strokeWidth="0.5" strokeDasharray="1,1"/>
-
-          {/* Heat zones for severe clusters */}
-          <ellipse cx="52" cy="42" rx="14" ry="12" fill="url(#heatRed)" />
-          <ellipse cx="44" cy="26" rx="10" ry="9" fill="url(#heatAmber)" />
-
-          {/* Markers */}
-          {visible.map(m => {
-            const color  = SEV_COLOR[m.severity];
-            const isSel  = selected === m.id;
-            const radius = Math.min(2.5 + m.count * 0.4, 4.5);
-            return (
-              <g key={m.id} onClick={() => setSelected(m.id === selected ? null : m.id)} style={{ cursor: 'pointer' }}>
-                {/* Pulse ring for severe */}
-                {m.severity === 'severe' && (
-                  <circle cx={m.x} cy={m.y} r={radius + 2} fill="none" stroke={color} strokeWidth="0.5" opacity="0.4">
-                    <animate attributeName="r" from={radius + 1} to={radius + 4} dur="2s" repeatCount="indefinite"/>
-                    <animate attributeName="opacity" from="0.4" to="0" dur="2s" repeatCount="indefinite"/>
-                  </circle>
-                )}
-                <circle
-                  cx={m.x} cy={m.y} r={radius}
-                  fill={color} fillOpacity={isSel ? 1 : 0.85}
-                  stroke={isSel ? '#fff' : 'rgba(255,255,255,0.3)'}
-                  strokeWidth={isSel ? 0.6 : 0.3}
-                />
-                {m.count > 1 && (
-                  <text x={m.x} y={m.y + 0.7} textAnchor="middle" fill="#fff" fontSize="2.2" fontWeight="700">
-                    {m.count}
-                  </text>
-                )}
-                <text x={m.x} y={m.y + radius + 2.5} textAnchor="middle" fill="rgba(255,255,255,0.65)" fontSize="2">
-                  {m.label}
-                </text>
-              </g>
-            );
-          })}
-        </svg>
-
-        {/* Legend */}
-        <div className="map-legend">
-          {LEGEND.map(l => (
-            <div key={l.label} className="map-legend-item">
-              <span className="map-legend-dot" style={{ background: l.color }} />
-              <span>{l.label}</span>
-            </div>
-          ))}
-          <div className="map-legend-item">
-            <span className="map-legend-river" />
-            <span>River</span>
+      {/* Leaflet Map */}
+      <div className="map-wrap" style={{ borderRadius: '12px', overflow: 'hidden', height: '420px' }}>
+        {loading ? (
+          <div style={{ height: '420px', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.4 }}>
+            Loading map...
           </div>
-        </div>
+        ) : (
+          <MapContainer
+            center={UK_CENTER}
+            zoom={UK_ZOOM}
+            style={{ height: '100%', width: '100%' }}
+            zoomControl={true}
+            scrollWheelZoom={false}
+          >
+            {/* ✅ OpenStreetMap — no API key */}
+            <TileLayer
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution='&copy; OpenStreetMap contributors'
+            />
 
-        {/* Selected tooltip */}
-        {sel && (
-          <div className="map-tooltip">
-            <div className="map-tooltip-hdr">
-              <span className="map-tooltip-loc">📍 {sel.label}</span>
-              <button className="map-tooltip-close" onClick={() => setSelected(null)}>✕</button>
-            </div>
-            <div className="map-tooltip-row">
-              <span className="map-tt-label">Category</span>
-              <span className="map-tt-val">{sel.category}</span>
-            </div>
-            <div className="map-tooltip-row">
-              <span className="map-tt-label">Severity</span>
-              <span className="map-tt-val" style={{ color: SEV_COLOR[sel.severity] }}>
-                ● {sel.severity.charAt(0).toUpperCase() + sel.severity.slice(1)}
-              </span>
-            </div>
-            <div className="map-tooltip-row">
-              <span className="map-tt-label">Reports</span>
-              <span className="map-tt-val">{sel.count} active</span>
-            </div>
-          </div>
+            {/* ✅ Real markers from backend */}
+            {visible.map((m, i) => (
+              <CircleMarker
+                key={m.reportId || i}
+                center={[m.lat, m.lng]}
+                radius={SEV_RADIUS[m.severity] || 8}
+                pathOptions={{
+                  color:       SEV_COLOR[m.severity] || '#CA8A04',
+                  fillColor:   SEV_COLOR[m.severity] || '#CA8A04',
+                  fillOpacity: 0.85,
+                  weight:      m.severity === 'critical' ? 2.5 : 1.5,
+                }}
+              >
+                <Popup>
+                  <div style={{ minWidth: '160px', fontFamily: 'inherit' }}>
+                    <p style={{ fontWeight: 700, marginBottom: '4px', fontSize: '13px' }}>
+                      {m.title}
+                    </p>
+                    <p style={{ fontSize: '11px', opacity: 0.7, marginBottom: '6px' }}>
+                      📍 {m.district}
+                    </p>
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      <span style={{
+                        fontSize: '10px', padding: '2px 6px', borderRadius: '4px',
+                        background: SEV_COLOR[m.severity], color: '#fff', fontWeight: 600
+                      }}>
+                        {m.severity}
+                      </span>
+                      <span style={{
+                        fontSize: '10px', padding: '2px 6px', borderRadius: '4px',
+                        background: 'rgba(0,0,0,0.08)'
+                      }}>
+                        {m.category?.replace(/_/g, ' ')}
+                      </span>
+                    </div>
+                    {m.votes > 0 && (
+                      <p style={{ fontSize: '11px', marginTop: '6px', opacity: 0.6 }}>
+                        ▲ {m.votes} votes
+                      </p>
+                    )}
+                  </div>
+                </Popup>
+              </CircleMarker>
+            ))}
+          </MapContainer>
         )}
+      </div>
+
+      {/* Legend */}
+      <div className="map-legend" style={{ marginTop: '12px' }}>
+        {Object.entries(SEV_COLOR).map(([sev, color]) => (
+          <div key={sev} className="map-legend-item">
+            <span className="map-legend-dot" style={{ background: color }} />
+            <span style={{ textTransform: 'capitalize' }}>{sev}</span>
+          </div>
+        ))}
       </div>
 
       {/* Summary strip */}
       <div className="map-summary">
         <div className="map-sum-item">
-          <span className="map-sum-num" style={{ color: '#DC2626' }}>{MARKERS.filter(m => m.severity === 'severe').length}</span>
-          <span className="map-sum-label">Severe zones</span>
+          <span className="map-sum-num" style={{ color: '#DC2626' }}>{severeCount}</span>
+          <span className="map-sum-label">Critical zones</span>
         </div>
         <div className="map-sum-sep" />
         <div className="map-sum-item">
-          <span className="map-sum-num">{MARKERS.reduce((a, m) => a + m.count, 0)}</span>
-          <span className="map-sum-label">Total reports</span>
+          <span className="map-sum-num">{markers.length}</span>
+          <span className="map-sum-label">Active reports</span>
         </div>
         <div className="map-sum-sep" />
         <div className="map-sum-item">
-          <span className="map-sum-num" style={{ color: 'var(--accent)' }}>2</span>
-          <span className="map-sum-label">Active clusters</span>
+          <span className="map-sum-num" style={{ color: 'var(--accent)' }}>
+            {[...new Set(markers.map(m => m.district))].length}
+          </span>
+          <span className="map-sum-label">Districts</span>
         </div>
         <div className="map-sum-sep" />
         <div className="map-sum-item">
-          <span className="map-sum-num" style={{ color: '#16A34A' }}>3</span>
-          <span className="map-sum-label">Resolved today</span>
+          <span className="map-sum-num" style={{ color: '#16A34A' }}>{trending.length}</span>
+          <span className="map-sum-label">Trending</span>
         </div>
       </div>
 
-      {/* District list */}
+      {/* Trending Districts */}
       <p className="section-label">Hotspot Districts</p>
       <div className="map-district-list">
-        {[...MARKERS]
-          .filter(m => m.severity === 'severe' || m.count >= 3)
-          .sort((a, b) => b.count - a.count)
-          .map(m => (
+        {trending.length > 0
+          ? trending.map((d, i) => (
             <div
-              key={m.id}
-              className={`map-district-row ${selected === m.id ? 'active' : ''}`}
-              onClick={() => setSelected(m.id === selected ? null : m.id)}
+              key={d.district}
+              className={`map-district-row ${selected === d.district ? 'active' : ''}`}
+              onClick={() => setSelected(d.district === selected ? null : d.district)}
             >
-              <span className="map-district-dot" style={{ background: SEV_COLOR[m.severity] }} />
-              <span className="map-district-name">{m.label}</span>
-              <span className="map-district-cat">{m.category}</span>
-              <span className="map-district-count">{m.count}</span>
+              <span className="map-district-dot" style={{
+                background: i === 0 ? '#DC2626' : i === 1 ? '#EA580C' : '#CA8A04'
+              }} />
+              <span className="map-district-name">{d.district}</span>
+              <span className="map-district-cat">{d.topCategory?.replace(/_/g, ' ')}</span>
+              <span className="map-district-count">{d.totalReports}</span>
             </div>
-          ))}
+          ))
+          : (
+            <div className="empty-state">No hotspot data yet</div>
+          )
+        }
       </div>
+
     </main>
   );
 }

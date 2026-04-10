@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import CategoryBadge from './CategoryBadge';
 import SeverityBadge from './SeverityBadge';
+import { voteReport } from '../api';
 import './ReportCard.css';
 
 const LocIcon = () => (
@@ -25,50 +26,79 @@ const FlagIcon = () => (
     <line x1="4" y1="22" x2="4" y2="15"/>
   </svg>
 );
-const PeopleIcon = () => (
-  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-  </svg>
-);
 
-const SIGNAL_COLORS = {
-  trending:  { color: '#A03030', bg: 'rgba(160,48,48,0.06)'  },
-  nearby:    { color: '#A07020', bg: 'rgba(160,112,32,0.06)' },
-  escalated: { color: '#1A6480', bg: 'rgba(26,100,128,0.06)' },
-  highRisk:  { color: '#A07020', bg: 'rgba(160,112,32,0.06)' },
-};
+// ✅ Format ISO date to relative time
+function timeAgo(dateStr) {
+  if (!dateStr) return '';
+  const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
+  if (diff < 60)   return `${diff}s ago`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400)return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
+}
 
 export default function ReportCard({ report, compact = false }) {
-  const { id, category, severity, title, description, location, votes, comments, timestamp, imageUrl, status, signal, impact } = report;
+  // ✅ FIXED: map API fields to component fields
+  const {
+    _id,
+    reportId,
+    category,
+    severity,
+    title,
+    description,
+    district,        // ✅ was location
+    votes: initVotes,
+    createdAt,       // ✅ was timestamp
+    photos,          // ✅ was imageUrl
+    status,
+  } = report;
+
   const [upvoted, setUpvoted] = useState(false);
   const [flagged,  setFlagged]  = useState(false);
-  const [count, setCount] = useState(votes);
+  const [count, setCount] = useState(initVotes || 0);
 
-  const sigStyle = signal ? SIGNAL_COLORS[signal.type] || SIGNAL_COLORS.nearby : null;
+  const imageUrl = photos?.[0] || null;
+  const token    = localStorage.getItem("token");
 
-  const onUp = (e) => {
-    e.preventDefault(); e.stopPropagation();
-    setUpvoted(v => { setCount(c => v ? c - 1 : c + 1); return !v; });
+  const onUp = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!token) return; // silent — no auth
+
+    // Optimistic update
+    const wasUpvoted = upvoted;
+    setUpvoted(v => !v);
+    setCount(c => wasUpvoted ? c - 1 : c + 1);
+
+    try {
+      const res = await voteReport(_id);
+      // Sync with server truth
+      setCount(res.data.data.votes);
+      setUpvoted(res.data.data.voted);
+    } catch {
+      // Revert on failure
+      setUpvoted(wasUpvoted);
+      setCount(c => wasUpvoted ? c + 1 : c - 1);
+    }
   };
-  const onFlag = (e) => { e.preventDefault(); e.stopPropagation(); setFlagged(v => !v); };
+
+  const onFlag = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setFlagged(v => !v);
+  };
 
   return (
-    <Link to={`/report/${id}`} className="rc">
-      {/* AI Signal strip */}
-      {signal && (
-        <div className="rc-signal" style={{ color: sigStyle.color, background: sigStyle.bg, borderLeftColor: sigStyle.color }}>
-          {signal.label}
-        </div>
-      )}
-
+    <Link to={`/report/${_id}`} className="rc">
       <div className="rc-body">
         <div className="rc-main">
           {/* Badges */}
           <div className="rc-badges">
             <CategoryBadge category={category} />
             <SeverityBadge severity={severity} />
-            {status === 'resolved' && <span className="rc-resolved">✓ Resolved</span>}
+            {status === 'resolved'    && <span className="rc-resolved">✓ Resolved</span>}
+            {status === 'in_progress' && <span className="rc-resolved" style={{color:'#F59E0B'}}>⏳ In Progress</span>}
           </div>
 
           {/* Title */}
@@ -77,28 +107,20 @@ export default function ReportCard({ report, compact = false }) {
           {/* Description */}
           {!compact && <p className="rc-desc truncate-2">{description}</p>}
 
-          {/* Impact hint */}
-          {impact && (
-            <div className="rc-impact">
-              <PeopleIcon />
-              <span>{impact}</span>
-            </div>
-          )}
-
           {/* Footer */}
           <div className="rc-footer">
-            <span className="rc-loc"><LocIcon />{location}</span>
+            <span className="rc-loc"><LocIcon />{district}</span>
             <div className="rc-actions">
               <button className={`rc-btn ${upvoted ? 'rc-btn--up' : ''}`} onClick={onUp} title="Support">
                 <UpIcon /><span>{count}</span>
               </button>
               <button className="rc-btn" onClick={e => e.preventDefault()} title="Comments">
-                <MsgIcon /><span>{comments}</span>
+                <MsgIcon /><span>0</span>
               </button>
               <button className={`rc-btn ${flagged ? 'rc-btn--flag' : ''}`} onClick={onFlag} title="Flag important">
                 <FlagIcon />
               </button>
-              <span className="rc-time">{timestamp}</span>
+              <span className="rc-time">{timeAgo(createdAt)}</span>
             </div>
           </div>
         </div>
