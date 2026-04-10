@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createReport } from '../api';
 import './ReportPage.css';
+import { analyzeReport } from '../api';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -30,16 +31,6 @@ const DISTRICTS = [
   'Haridwar', 'Nainital', 'Pauri Garhwal', 'Pithoragarh',
   'Rudraprayag', 'Tehri Garhwal', 'Udham Singh Nagar', 'Uttarkashi',
 ];
-
-const AI_THINKING_SEQUENCES = {
-  road_damage:  ['Scanning road surface texture...', 'Detected irregular surface patterns...', 'Cross-referencing NH road condition database...', 'Possible issue: pothole or structural road damage identified.'],
-  sanitation:   ['Analysing object density in frame...', 'Detected accumulation of solid waste...', 'Checking proximity to residential zones...', 'Possible issue: uncleared garbage near public area.'],
-  women_safety: ['Evaluating ambient light levels...', 'Detected insufficient lighting on pedestrian path...', 'Cross-referencing with safety incident zones...', 'Possible issue: unsafe conditions for women after dark.'],
-  water:        ['Analysing surface moisture patterns...', 'Detected water logging or pipe exposure...', 'Comparing with reported supply issues...', 'Possible issue: water leakage or supply failure.'],
-  wildlife:     ['Scanning for animal habitat indicators...', 'Detected wildlife activity near settlement...', 'Cross-referencing forest department alert zones...', 'Possible issue: wild animal sighting near populated area.'],
-  pilgrimage:   ['Detecting pilgrimage infrastructure...', 'Identified yatra route or gathering point...', 'Checking for service disruptions in zone...', 'Possible issue: pilgrimage facility or service failure.'],
-  other:        ['Analysing image content...', 'Detecting civic issue patterns...', 'Cross-referencing district issue database...', 'Possible civic issue detected.'],
-};
 
 const AI_RESULTS = [
   { category: 'road_damage',  severity: 'critical', confidence: 94, reasoning: 'Large surface deformation consistent with structural road failure, likely worsened by water erosion.' },
@@ -221,41 +212,80 @@ export default function ReportPage() {
       { timeout: 6000 }
     );
   }, []);
+  const processImage = useCallback((file) => {
+  if (!file || !file.type.startsWith('image/')) return;
+  setImageFile(file);
 
-  const runAiAnalysis = useCallback((result) => {
-    const msgs = AI_THINKING_SEQUENCES[result.category] || AI_THINKING_SEQUENCES.other;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const dataUrl = e.target.result;
+    if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) return;
+    setImagePreview(dataUrl);
+    setStep(2);
+
+    // Start animation immediately
+    const thinkingMsgs = [
+      'Scanning image content and context...',
+      'Detecting civic issue patterns...',
+      'Cross-referencing Uttarakhand issue database...',
+      'Generating AI insights and recommendations...',
+    ];
     setThinkingMessages([]);
     setThinkingDone(false);
-    msgs.forEach((msg, i) => {
+    thinkingMsgs.forEach((msg, i) => {
       setTimeout(() => {
         setThinkingMessages(prev => [...prev, msg]);
-        if (i === msgs.length - 1) {
-          setTimeout(() => {
-            setThinkingDone(true);
-            setTimeout(() => setStep(3), 1200);
-          }, 600);
-        }
       }, i * 750);
     });
-  }, []);
 
-  const processImage = useCallback((file) => {
-    if (!file || !file.type.startsWith('image/')) return;
-    setImageFile(file); // ✅ store actual file for FormData
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const dataUrl = e.target.result;
-      if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) return;
-      setImagePreview(dataUrl);
-      const result = randomAI();
-      setAiResult(result);
-      setCategory(result.category);
-      setSeverity(result.severity);
-      setStep(2);
-      runAiAnalysis(result);
-    };
-    reader.readAsDataURL(file);
-  }, [runAiAnalysis]);
+    const animDuration = thinkingMsgs.length * 750 + 600;
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+      // Not logged in — use random fallback
+      setTimeout(() => {
+        const result = randomAI();
+        setAiResult(result);
+        setCategory(result.category);
+        setSeverity(result.severity);
+        setThinkingDone(true);
+        setTimeout(() => setStep(3), 1200);
+      }, animDuration);
+      return;
+    }
+
+    // Real AI call + animation run in parallel
+    analyzeReport({
+      title:       title.trim() || 'Civic issue detected from photo',
+      description: `Citizen reported issue in Uttarakhand: ${title.trim() || 'civic problem'}. Analyze and classify this civic issue — could be road damage, garbage, women safety, wildlife, water supply, electricity, sanitation, or pilgrimage related.`,
+    })
+      .then(res => {
+        const ai = res.data.data;
+        const result = {
+          category:   ai.category          || 'other',
+          severity:   ai.severity          || 'medium',
+          confidence: Math.round((ai.confidence || 0.8) * 100),
+          reasoning:  ai.insights          || 'AI analysis complete.',
+        };
+        setAiResult(result);
+        setCategory(result.category);
+        setSeverity(result.severity);
+      })
+      .catch(() => {
+        const result = randomAI();
+        setAiResult(result);
+        setCategory(result.category);
+        setSeverity(result.severity);
+      })
+      .finally(() => {
+        setTimeout(() => {
+          setThinkingDone(true);
+          setTimeout(() => setStep(3), 1200);
+        }, animDuration);
+      });
+  };
+  reader.readAsDataURL(file);
+}, [title]); // ✅ no dependency on runAiAnalysis anymore
 
   // Drag & drop
   useEffect(() => {
@@ -351,6 +381,19 @@ export default function ReportPage() {
             Choose from Gallery
           </button>
         </div>
+        <div className="rp-field-group" style={{ marginTop: '16px' }}>
+          <label className="rp-label">
+            Brief Title <span className="rp-req">*</span>
+            <span className="rp-label-hint"> — helps AI understand the issue</span>
+          </label>
+          <input
+            className="rp-input"
+            placeholder="e.g. Large pothole on NH-58 near Devprayag"
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            maxLength={120}
+          />
+        </div>
         <LocationRow locationStatus={locationStatus} location={location} district={district} onDistrictChange={setDistrict} />
         <button className="rp-skip-btn" onClick={() => setStep(3)}>Skip photo → fill details manually</button>
       </div>
@@ -399,7 +442,10 @@ export default function ReportPage() {
         </div>
 
         <div className="rp-field-group">
-          <label className="rp-label">Title <span className="rp-req">*</span></label>
+          <label className="rp-label">
+            Title <span className="rp-req">*</span>
+            {title && <span className="rp-ai-tag">→ from step 1</span>}
+          </label>
           <input
             className={`rp-input ${title.trim().length > 0 && title.trim().length < 5 ? 'is-error' : title.trim().length >= 5 ? 'is-valid' : ''}`}
             placeholder="e.g. Large pothole on NH-58 near Devprayag junction"

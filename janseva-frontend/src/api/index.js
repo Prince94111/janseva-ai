@@ -28,6 +28,9 @@ export const addComment    = (id, data) => API.post(`/reports/${id}/comments`, d
 // ─── Trending ─────────────────────────────────────
 export const getTrending = (params) => API.get("/trending", { params });
 
+// ─── AI ───────────────────────────────────────────
+export const analyzeReport = (data) => API.post("/ai/analyze", data);
+
 // ─── Map ──────────────────────────────────────────
 export const getMarkers = () => API.get("/map/markers");
 
