@@ -16,6 +16,13 @@ import SignupPage   from './pages/SignupPage';
 
 const INSIGHTS_ROUTES = ['/', '/trending'];
 
+// ✅ Redirect to login if not logged in
+function PrivateRoute({ children }) {
+  const token = localStorage.getItem('token');
+  if (!token) return <Navigate to="/login" replace />;
+  return children;
+}
+
 // ✅ Protect officer-only routes
 function OfficerRoute({ children }) {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -45,17 +52,17 @@ function Shell() {
       <div className="main-area">
         <div className="feed-column">
           <Routes>
-            <Route path="/"           element={<HomePage />} />
-            <Route path="/report"     element={<ReportPage />} />
-            <Route path="/map"        element={<MapPage />} />
-            <Route path="/report/:id" element={<ReportDetail />} />
-            <Route path="/trending"   element={<TrendingPage />} />
+            <Route path="/"           element={<PrivateRoute><HomePage /></PrivateRoute>} />
+            <Route path="/report"     element={<PrivateRoute><ReportPage /></PrivateRoute>} />
+            <Route path="/map"        element={<PrivateRoute><MapPage /></PrivateRoute>} />
+            <Route path="/report/:id" element={<PrivateRoute><ReportDetail /></PrivateRoute>} />
+            <Route path="/trending"   element={<PrivateRoute><TrendingPage /></PrivateRoute>} />
             <Route path="/gov"        element={
               <OfficerRoute><GovDashboard /></OfficerRoute>
             } />
             <Route path="/login"      element={<LoginPage />} />
             <Route path="/signup"     element={<SignupPage />} />
-            <Route path="*"           element={<Navigate to="/" replace />} />
+            <Route path="*"           element={<Navigate to="/login" replace />} />
           </Routes>
         </div>
         {showInsights && (
