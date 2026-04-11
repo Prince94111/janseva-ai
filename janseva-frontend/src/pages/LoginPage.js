@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { login } from '../api';
 import './AuthPage.css';
@@ -29,54 +29,87 @@ export default function LoginPage() {
 
   return (
     <div className="auth-page">
-      <div className="auth-card">
-        <div className="auth-logo">
-          <span className="auth-logo-icon">🏔️</span>
-          <span className="auth-logo-text">JanSeva<span>AI</span></span>
+      {/* ── Left Panel — Image ── */}
+      <div className="auth-left">
+        <div className="auth-left-overlay" />
+        <div className="auth-left-content">
+          <div className="auth-left-logo">
+            <span className="auth-logo-mark">J</span>
+            <span className="auth-left-logo-text">
+              JanSeva<span>AI</span>
+            </span>
+          </div>
+          <p className="auth-left-tagline">Apni awaaz, apna Uttarakhand</p>
+          <p className="auth-left-sub">Report issues. Track progress.</p>
         </div>
+      </div>
 
-        <h1 className="auth-title">Welcome back</h1>
-        <p className="auth-sub">Login to report and track civic issues</p>
+      {/* ── Right Panel — Form ── */}
+      <div className="auth-right">
+        <div className="auth-card">
 
-        {error && <div className="auth-error">{error}</div>}
+          {/* Logo top */}
+          <div className="auth-logo">
+            <span className="auth-logo-mark">J</span>
+            <span className="auth-logo-text">
+              JanSeva<span>AI</span>
+            </span>
+          </div>
+          <p className="auth-portal-tag">CITIZEN PORTAL</p>
 
-        <form className="auth-form" onSubmit={handleLogin}>
-          <div className="auth-field">
-            <label className="auth-label">Email</label>
-            <input
-              className="auth-input"
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              autoComplete="email"
-            />
+          <h1 className="auth-title">Namaskar! 🙏</h1>
+          <p className="auth-sub">Sign in to report or track your civic issues</p>
+
+          {error && <div className="auth-error">{error}</div>}
+
+          <form className="auth-form" onSubmit={handleLogin}>
+            <div className="auth-field">
+              <label className="auth-label">Email</label>
+              <input
+                className="auth-input"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                autoComplete="email"
+              />
+            </div>
+
+            <div className="auth-field">
+              <label className="auth-label">Password</label>
+              <input
+                className="auth-input"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                autoComplete="current-password"
+              />
+            </div>
+
+            <button
+              className={`auth-btn ${loading ? 'loading' : ''}`}
+              type="submit"
+              disabled={loading}
+            >
+              {loading ? (
+                <span className="auth-btn-loading">
+                  <span className="auth-spinner" /> Signing in...
+                </span>
+              ) : 'Sign In'}
+            </button>
+          </form>
+
+          <p className="auth-switch">
+            New citizen? <Link to="/signup">Register here</Link>
+          </p>
+
+          <div className="auth-footer-tag">
+            <span className="auth-footer-dot" />
+            Uttarakhand Government · Jan Seva Portal
           </div>
 
-          <div className="auth-field">
-            <label className="auth-label">Password</label>
-            <input
-              className="auth-input"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              autoComplete="current-password"
-            />
-          </div>
-
-          <button
-            className={`auth-btn ${loading ? 'loading' : ''}`}
-            type="submit"
-            disabled={loading}
-          >
-            {loading ? 'Logging in...' : 'Login'}
-          </button>
-        </form>
-
-        <p className="auth-switch">
-          Don't have an account? <Link to="/signup">Sign up</Link>
-        </p>
+        </div>
       </div>
     </div>
   );
