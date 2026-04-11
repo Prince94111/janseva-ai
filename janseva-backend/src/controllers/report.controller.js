@@ -284,7 +284,50 @@ async function addComment(req, res) {
     });
   }
 }
+// DELETE /reports/:id
+async function deleteReport(req, res) {
+  try {
+    const { id } = req.params;
 
+    const query = mongoose.Types.ObjectId.isValid(id)
+      ? { _id: id }
+      : { reportId: id };
+
+    const report = await Report.findOne(query);
+
+    if (!report) {
+      return res.status(404).json({
+        success: false,
+        message: "Report not found",
+      });
+    }
+
+    // ✅ Only owner or officer can delete
+    const userId   = req.user._id.toString();
+    const isOwner  = report.reportedBy?.toString() === userId;
+    const isOfficer = req.user.role === 'officer';
+
+    if (!isOwner && !isOfficer) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to delete this report",
+      });
+    }
+
+    await Report.findOneAndDelete(query);
+
+    return res.status(200).json({
+      success: true,
+      message: "Report deleted successfully",
+    });
+  } catch (err) {
+    console.error("deleteReport Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+}
 module.exports = {
   createReport,
   getReports,
@@ -292,4 +335,5 @@ module.exports = {
   voteReport,
   updateStatus,
   addComment,
+  deleteReport,
 };

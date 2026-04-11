@@ -66,9 +66,11 @@ function StepIndicator({ current }) {
 
 // ─── Location Row ─────────────────────────────────────────────────────────────
 
-function LocationRow({ locationStatus, location, district, onDistrictChange }) {
+function LocationRow({ locationStatus, location, district, onDistrictChange, address, onAddressChange }) {
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+
+      {/* GPS Status */}
       {locationStatus === 'loading' && (
         <div className="loc-row loading">
           <span className="loc-spinner" />
@@ -82,18 +84,32 @@ function LocationRow({ locationStatus, location, district, onDistrictChange }) {
           <span className="loc-gps-badge">GPS ✓</span>
         </div>
       )}
-      {/* ✅ Always show district picker — required by backend */}
+      {locationStatus === 'denied' && (
+        <div className="loc-row denied">
+          <span className="loc-icon">📍</span>
+          <span>GPS unavailable — enter location below</span>
+        </div>
+      )}
+
+      {/* ✅ District dropdown — always visible */}
       <select
         className="rp-input"
         value={district}
         onChange={e => onDistrictChange(e.target.value)}
-        style={{ marginTop: '8px' }}
       >
         <option value="">Select district *</option>
         {DISTRICTS.map(d => (
           <option key={d} value={d}>{d}</option>
         ))}
       </select>
+
+      {/* ✅ Manual address — always visible */}
+      <input
+        className="rp-input"
+        placeholder="Village / Area / Landmark (optional)"
+        value={address}
+        onChange={e => onAddressChange(e.target.value)}
+      />
     </div>
   );
 }
@@ -184,6 +200,7 @@ export default function ReportPage() {
   const [location,       setLocation]       = useState('');
   const [locationCoords, setLocationCoords] = useState(null);
   const [district,       setDistrict]       = useState('');
+  const [address,        setAddress]        = useState('');
 
   // AI
   const [thinkingMessages, setThinkingMessages] = useState([]);
@@ -320,10 +337,14 @@ export default function ReportPage() {
       formData.append('category',    category);
       formData.append('severity',    severity);
       formData.append('district',    district);
-      if (locationCoords) {
+     if (locationCoords) {
         formData.append('location[type]',         'Point');
         formData.append('location[coordinates][]', locationCoords.lng);
         formData.append('location[coordinates][]', locationCoords.lat);
+      }
+      // ✅ ADD THIS
+      if (address.trim()) {
+        formData.append('address', address.trim());
       }
       if (imageFile) {
         formData.append('photos', imageFile);
@@ -394,7 +415,14 @@ export default function ReportPage() {
             maxLength={120}
           />
         </div>
-        <LocationRow locationStatus={locationStatus} location={location} district={district} onDistrictChange={setDistrict} />
+        <LocationRow
+          locationStatus={locationStatus}
+          location={location}
+          district={district}
+          onDistrictChange={setDistrict}
+          address={address}
+          onAddressChange={setAddress}
+        />
         <button className="rp-skip-btn" onClick={() => setStep(3)}>Skip photo → fill details manually</button>
       </div>
     </div>
@@ -438,7 +466,14 @@ export default function ReportPage() {
 
         <div className="rp-field-group">
           <label className="rp-label">📍 Location</label>
-          <LocationRow locationStatus={locationStatus} location={location} district={district} onDistrictChange={setDistrict} />
+          <LocationRow 
+            locationStatus={locationStatus} 
+            location={location} 
+            district={district} 
+            onDistrictChange={setDistrict}
+            address={address}
+            onAddressChange={setAddress}
+          />
         </div>
 
         <div className="rp-field-group">

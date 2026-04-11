@@ -1,5 +1,5 @@
-const express = require("express");
-const router = express.Router(); // ✅ Keep this one only
+const express = require("express"); 
+const router = express.Router();
 
 const {
   createReport,
@@ -8,6 +8,7 @@ const {
   voteReport,
   updateStatus,
   addComment,
+  deleteReport, // ✅ ADDED
 } = require("../../controllers/report.controller");
 
 const { downloadReportPDF } = require("../../controllers/pdf.controller");
@@ -25,6 +26,9 @@ router.get("/:id",     getReportById);
 router.post("/",             protect, upload, createReport);
 router.patch("/:id/vote",    protect, voteReport);
 router.post("/:id/comments", protect, addComment);
+
+// ✅ DELETE (owner or officer)
+router.delete("/:id", protect, deleteReport);
 
 // OFFICER
 router.patch("/:id/status", protect, roleGuard("officer"), updateStatus);
