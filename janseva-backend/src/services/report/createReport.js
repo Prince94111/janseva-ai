@@ -5,6 +5,8 @@ const { Report } = require("../../models/report.model");
 async function checkAIImage(imageUrl) {
   return new Promise((resolve) => {
     try {
+      console.log("🔍 Checking image:", imageUrl); // ← see what URL is being sent
+
       const params = new URLSearchParams({
         url: imageUrl,
         models: "genai",
@@ -12,23 +14,30 @@ async function checkAIImage(imageUrl) {
         api_secret: process.env.SIGHTENGINE_API_SECRET,
       });
 
-      https.get(`https://api.sightengine.com/1.0/check.json?${params}`, (res) => {
+      const fullUrl = `https://api.sightengine.com/1.0/check.json?${params}`;
+      console.log("📡 SightEngine URL:", fullUrl); // ← see full request
+
+      https.get(fullUrl, (res) => {
         let data = "";
         res.on("data", (chunk) => { data += chunk; });
         res.on("end", () => {
+          console.log("📨 SightEngine response:", data); // ← see raw response
           try {
             const json = JSON.parse(data);
+            console.log("🤖 AI Score:", json.type?.ai_generated ?? 0);
             resolve(json.type?.ai_generated ?? 0);
           } catch {
+            console.error("❌ JSON parse failed:", data);
             resolve(0);
           }
         });
       }).on("error", (err) => {
-        console.error("AI check failed:", err.message);
+        console.error("❌ HTTPS request failed:", err.message);
         resolve(0);
       });
+
     } catch (err) {
-      console.error("AI check failed:", err.message);
+      console.error("❌ checkAIImage crashed:", err.message);
       resolve(0);
     }
   });
