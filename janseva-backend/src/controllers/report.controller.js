@@ -39,6 +39,14 @@ async function createReport(req, res) {
     });
   } catch (err) {
     console.error("createReport Error:", err);
+
+    if (err.statusCode === 400) {
+      return res.status(400).json({
+        success: false,
+        message: err.message,
+      });
+    }
+
     return res.status(500).json({
       success: false,
       message: "Internal server error",
