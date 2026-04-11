@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import './Sidebar.css';
 
 const icons = {
@@ -45,21 +45,64 @@ const icons = {
       <polyline points="9 18 15 12 9 6"/>
     </svg>
   ),
+  logout: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+      <polyline points="16 17 21 12 16 7"/>
+      <line x1="21" y1="12" x2="9" y2="12"/>
+    </svg>
+  ),
+  login: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+      <polyline points="10 17 15 12 10 7"/>
+      <line x1="15" y1="12" x2="3" y2="12"/>
+    </svg>
+  ),
 };
 
 const NAV = [
   { path: '/',         label: 'Home',     icon: icons.home },
   { path: '/trending', label: 'Trending', icon: icons.trending },
-  { path: '/report',   label: 'Report',   icon: icons.report,  cta: true },
+  { path: '/report',   label: 'Report',   icon: icons.report, cta: true },
   { path: '/map',      label: 'Map',      icon: icons.map },
 ];
 
+// Get initials from name
+function getInitials(name) {
+  if (!name) return '?';
+  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+}
+
+// Get accent color per role
+function getRoleColor(role) {
+  return role === 'officer' ? '#0891B2' : 'var(--accent)';
+}
+
 export default function Sidebar() {
-  const loc = useLocation();
+  const loc      = useLocation();
+  const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
+  const [user,      setUser]      = useState(null);
+
+  // ✅ Read user from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem('user');
+    if (stored) {
+      try { setUser(JSON.parse(stored)); } catch {}
+    }
+  }, [loc]); // re-read on every route change
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+    navigate('/login');
+  };
 
   return (
     <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
+
       {/* Logo */}
       <div className="sb-logo">
         <Link to="/" className="sb-logo-link">
@@ -93,7 +136,7 @@ export default function Sidebar() {
 
       <div className="sb-spacer" />
 
-      {/* Gov Dashboard — secondary */}
+      {/* Gov Dashboard */}
       <div className="sb-footer">
         <Link
           to="/gov"
@@ -105,7 +148,71 @@ export default function Sidebar() {
           {!collapsed && <span className="sb-label">Gov Dashboard</span>}
         </Link>
 
-        <button className="sb-collapse-btn" onClick={() => setCollapsed(c => !c)}>
+        {/* ✅ User section */}
+        {user ? (
+          <div className="sb-user-section">
+            <div className={`sb-user-row ${collapsed ? 'collapsed' : ''}`}>
+              {/* Avatar */}
+              <div
+                className="sb-avatar"
+                style={{ background: getRoleColor(user.role) }}
+                title={user.name}
+              >
+                {getInitials(user.name)}
+              </div>
+
+              {/* Name + role */}
+              {!collapsed && (
+                <div className="sb-user-info">
+                  <span className="sb-user-name">{user.name}</span>
+                  <span
+                    className="sb-user-role"
+                    style={{ color: getRoleColor(user.role) }}
+                  >
+                    {user.role === 'officer' ? 'Gov Officer' : 'Citizen'}
+                  </span>
+                </div>
+              )}
+
+              {/* Logout button */}
+              {!collapsed && (
+                <button
+                  className="sb-logout-btn"
+                  onClick={handleLogout}
+                  title="Logout"
+                >
+                  {icons.logout}
+                </button>
+              )}
+            </div>
+
+            {/* Logout when collapsed */}
+            {collapsed && (
+              <button
+                className="sb-collapse-btn"
+                onClick={handleLogout}
+                title="Logout"
+              >
+                {icons.logout}
+              </button>
+            )}
+          </div>
+        ) : (
+          /* ✅ Login button when not logged in */
+          <Link
+            to="/login"
+            className="sb-item"
+            title={collapsed ? 'Login' : ''}
+          >
+            <span className="sb-icon">{icons.login}</span>
+            {!collapsed && <span className="sb-label">Login</span>}
+          </Link>
+        )}
+
+        <button
+          className="sb-collapse-btn"
+          onClick={() => setCollapsed(c => !c)}
+        >
           {collapsed ? icons.expand : icons.collapse}
         </button>
       </div>

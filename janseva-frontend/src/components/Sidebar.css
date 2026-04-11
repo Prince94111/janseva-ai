@@ -118,3 +118,87 @@
   .sb-logo { padding: 14px 10px; }
 }
 @media (max-width: 480px) { .sidebar { display: none; } }
+
+/* ── User Section ─────────────────────────────────────── */
+.sb-user-section {
+  border-top: 1px solid var(--border-soft);
+  padding-top: 6px;
+  margin-top: 4px;
+}
+
+.sb-user-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 6px;
+  border-radius: var(--r-sm);
+  transition: background var(--t-fast);
+}
+
+.sb-user-row:hover { background: var(--bg-elevated); }
+
+.sb-user-row.collapsed {
+  justify-content: center;
+  padding: 6px;
+}
+
+/* Avatar circle */
+.sb-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #000;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+}
+
+/* Name + role */
+.sb-user-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.sb-user-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sb-user-role {
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Logout button */
+.sb-logout-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--t-fast), background var(--t-fast);
+  flex-shrink: 0;
+}
+
+.sb-logout-btn:hover {
+  color: #DC2626;
+  background: rgba(220, 38, 38, 0.08);
+}

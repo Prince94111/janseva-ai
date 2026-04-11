@@ -154,7 +154,7 @@ function generateReportPDF(report) {
         .fillColor("#92400e")
         .fontSize(10)
         .font("Helvetica-Bold")
-        .text(`⚡ Priority Score: ${report.priorityScore || "N/A"}  ·  Community Votes: ${report.votes || 0}  ·  AI Confidence: ${report.aiConfidence ? Math.round(report.aiConfidence * 100) + "%" : "N/A"}`, 60, infoY + 143);
+        .text(`Priority Score: ${report.priorityScore || "N/A"}  ·  Community Votes: ${report.votes || 0}  ·  AI Confidence: ${report.aiConfidence ? Math.round(report.aiConfidence * 100) + "%" : "N/A"}`, 60, infoY + 143);
 
       // ── Divider ───────────────────────────────────────────────
       doc
@@ -193,7 +193,7 @@ function generateReportPDF(report) {
           .fillColor("#1d4ed8")
           .fontSize(9)
           .font("Helvetica-Bold")
-          .text("🤖 AI INSIGHTS", 60, aiY + 6);
+          .text("AI INSIGHTS", 60, aiY + 6);
 
         doc
           .fillColor("#1e40af")
