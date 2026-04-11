@@ -59,7 +59,8 @@ async function createReport(data) {
   // ── AI Detection: check first uploaded photo ─────────────────
   if (photos.length > 0) {
     const aiScore = await checkAIImage(photos[0]);
-    if (aiScore > 0.85) {
+    console.log("🤖 AI Score:", aiScore);
+    if (aiScore > 0.5) {
       const error = new Error("Image appears to be AI-generated. Please upload a real photo of the issue.");
       error.statusCode = 400;
       throw error;
