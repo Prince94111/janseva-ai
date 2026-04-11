@@ -2,12 +2,17 @@
   display: block;
   text-decoration: none;
   border-bottom: 1px solid var(--border-soft);
-  transition: background var(--t-fast);
   cursor: pointer;
 }
-.rc:hover { background: var(--bg-surface); }
-.rc:hover .rc-title { color: #fff; }
-.rc:active { background: var(--bg-elevated); }
+.rc:hover {
+  background: var(--bg-surface);
+}
+.rc:hover .rc-title {
+  color: #fff;
+}
+.rc:active {
+  background: var(--bg-elevated);
+}
 
 /* AI Signal strip — much softer */
 .rc-signal {
@@ -27,28 +32,40 @@
 }
 
 .rc-main {
-  flex: 1; min-width: 0;
-  display: flex; flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
   gap: var(--sp-2);
 }
 
 /* Badges */
-.rc-badges { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.rc-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+}
 
 .rc-resolved {
-  font-size: 10px; font-weight: 600;
+  font-size: 10px;
+  font-weight: 600;
   color: var(--minor);
   border: 1px solid var(--minor-border);
   background: var(--minor-bg);
-  border-radius: 4px; padding: 2px 7px;
-  text-transform: uppercase; letter-spacing: 0.05em;
+  border-radius: 4px;
+  padding: 2px 7px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 /* Title */
 .rc-title {
-  font-size: 14px; font-weight: 600;
+  font-size: 14px;
+  font-weight: 600;
   color: var(--text-primary);
-  letter-spacing: -0.01em; line-height: 1.45;
+  letter-spacing: -0.01em;
+  line-height: 1.45;
   transition: color var(--t-fast);
 }
 
@@ -62,51 +79,214 @@
 
 /* Impact */
 .rc-impact {
-  display: flex; align-items: center; gap: 5px;
-  font-size: 11px; color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-tertiary);
 }
 
 /* Footer */
 .rc-footer {
-  display: flex; align-items: center;
+  display: flex;
+  align-items: center;
   justify-content: space-between;
   margin-top: var(--sp-1);
-  flex-wrap: wrap; gap: 6px;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .rc-loc {
-  display: flex; align-items: center; gap: 4px;
-  font-size: 11px; color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-tertiary);
 }
 
-.rc-actions { display: flex; align-items: center; gap: 2px; }
+.rc-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
 
 .rc-btn {
-  display: flex; align-items: center; gap: 4px;
-  background: transparent; border: none;
-  border-radius: var(--r-sm); padding: 4px 7px;
-  font-size: 12px; color: var(--text-tertiary);
-  cursor: pointer; font-family: var(--font);
-  transition: background var(--t-fast), color var(--t-fast), transform var(--t-fast);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  border-radius: var(--r-sm);
+  padding: 4px 7px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-family: var(--font);
+  transition:
+    background var(--t-fast),
+    color var(--t-fast),
+    transform var(--t-fast);
 }
-.rc-btn:hover { background: var(--bg-elevated); color: var(--text-secondary); }
-.rc-btn:active { transform: scale(0.93); }
+.rc-btn:hover {
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+}
+.rc-btn:active {
+  transform: scale(0.93);
+}
 
-.rc-btn--up   { color: var(--accent-soft); background: var(--accent-dim); }
-.rc-btn--flag { color: var(--severe); background: var(--severe-bg); }
+.rc-btn--up {
+  color: var(--accent-soft);
+  background: var(--accent-dim);
+}
+.rc-btn--flag {
+  color: var(--severe);
+  background: var(--severe-bg);
+}
 
 .rc-time {
-  font-size: 11px; color: var(--text-tertiary);
-  padding-left: var(--sp-1); white-space: nowrap;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  padding-left: var(--sp-1);
+  white-space: nowrap;
 }
 
 /* Thumbnail */
-.rc-thumb { flex-shrink: 0; width: 72px; }
+.rc-thumb {
+  flex-shrink: 0;
+  width: 72px;
+}
 .rc-thumb img {
-  width: 72px; height: 54px; object-fit: cover;
-  border-radius: var(--r-sm); display: block;
+  width: 72px;
+  height: 54px;
+  object-fit: cover;
+  border-radius: var(--r-sm);
+  display: block;
   background: var(--bg-elevated);
   opacity: 0.85;
   transition: opacity var(--t-mid);
 }
-.rc:hover .rc-thumb img { opacity: 1; }
+.rc:hover .rc-thumb img {
+  opacity: 1;
+}
+
+/* ── Hover lift effect ────────────────────────────────── */
+.rc {
+  transition:
+    background var(--t-fast),
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.rc:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  border-bottom-color: transparent;
+}
+
+.rc:active {
+  transform: translateY(0px);
+  box-shadow: none;
+}
+
+/* ── Upvote button pop animation ──────────────────────── */
+@keyframes votePop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.3);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.rc-btn--up {
+  animation: votePop 0.35s ease forwards;
+}
+
+/* ── Thumbnail zoom on hover ──────────────────────────── */
+.rc-thumb {
+  overflow: hidden;
+  border-radius: var(--r-sm);
+}
+
+.rc-thumb img {
+  transition:
+    transform 0.3s ease,
+    opacity var(--t-mid);
+}
+
+.rc:hover .rc-thumb img {
+  transform: scale(1.06);
+  opacity: 1;
+}
+
+/* ── Severity badge pulse for critical ────────────────── */
+@keyframes criticalPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(220, 38, 38, 0);
+  }
+}
+
+/* Apply in SeverityBadge.css or here via global */
+.rc-badges [class*="sev-critical"],
+.rc-badges [class*="severity-critical"] {
+  animation: criticalPulse 2s infinite;
+}
+
+/* ── Title color slide on hover ───────────────────────── */
+.rc-title {
+  transition: color 0.2s ease;
+  background: linear-gradient(
+    90deg,
+    var(--text-primary) 0%,
+    var(--accent-soft) 100%
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+}
+
+.rc:hover .rc-title {
+  -webkit-text-fill-color: transparent;
+}
+
+/* ── Action buttons micro interaction ─────────────────── */
+.rc-btn {
+  transition:
+    background var(--t-fast),
+    color var(--t-fast),
+    transform 0.15s ease;
+}
+
+.rc-btn:hover {
+  transform: translateY(-1px);
+}
+
+.rc-btn:active {
+  transform: scale(0.9);
+}
+
+/* ── Fade in each card ────────────────────────────────── */
+@keyframes cardEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rc {
+  animation: cardEnter 0.3s ease forwards;
+}
