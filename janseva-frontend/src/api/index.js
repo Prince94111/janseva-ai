@@ -24,6 +24,7 @@ export const createReport  = (data)   => API.post("/reports", data);
 export const voteReport    = (id)     => API.patch(`/reports/${id}/vote`);
 export const updateStatus  = (id, data) => API.patch(`/reports/${id}/status`, data);
 export const addComment    = (id, data) => API.post(`/reports/${id}/comments`, data);
+export const deleteReport = (id) => API.delete(`/reports/${id}`);
 
 // ─── PDF ──────────────────────────────────────────
 export const downloadPDF = (id) => API.get(`/reports/${id}/pdf`, { responseType: "blob" });

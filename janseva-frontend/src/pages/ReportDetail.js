@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import CategoryBadge from '../components/CategoryBadge';
 import SeverityBadge from '../components/SeverityBadge';
-import { getReportById, voteReport, addComment as addCommentAPI, downloadPDF } from '../api';
+import { getReportById, voteReport, addComment as addCommentAPI, downloadPDF, deleteReport as deleteReportAPI } from '../api';
 import './ReportDetail.css';
 
 
@@ -112,6 +112,16 @@ export default function ReportDetail() {
       setPosting(false);
     }
   };
+  const onDelete = async () => {
+    if (!window.confirm('Are you sure you want to delete this report?')) return;
+
+    try {
+      await deleteReportAPI(report._id);
+      navigate('/');
+    } catch {
+      alert('Delete failed. Only the report owner can delete.');
+    }
+  };
   const onDownloadPDF = async () => {
   try {
     const res = await downloadPDF(report._id);
@@ -125,6 +135,10 @@ export default function ReportDetail() {
     alert("PDF generation failed. Please try again.");
     }
   };
+
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const isOwner = user._id === report?.reportedBy?._id;
+  const isOfficer = user.role === 'officer';
 
   // ── Loading / Error states ──────────────────────────────────────
   if (loading) return (
@@ -238,6 +252,15 @@ export default function ReportDetail() {
             <ShareIcon />
             <span>Share</span>
           </button>
+          {(isOwner || isOfficer) && (
+            <button
+              className="rd-action-btn"
+              onClick={onDelete}
+              style={{ color: '#DC2626' }}
+            >
+              <span>Delete</span>
+            </button>
+          )}
 
           <button className="rd-action-btn" onClick={onDownloadPDF}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
