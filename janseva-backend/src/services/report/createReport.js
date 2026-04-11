@@ -1,24 +1,37 @@
+const https = require("https");
 const { Report } = require("../../models/report.model");
-
-const fetch = require("node-fetch");
 
 // ── AI image detection ──────────────────────────────────────────
 async function checkAIImage(imageUrl) {
-  try {
-    const params = new URLSearchParams({
-      url: imageUrl,
-      models: "genai",
-      api_user: process.env.SIGHTENGINE_API_USER,
-      api_secret: process.env.SIGHTENGINE_API_SECRET,
-    });
+  return new Promise((resolve) => {
+    try {
+      const params = new URLSearchParams({
+        url: imageUrl,
+        models: "genai",
+        api_user: process.env.SIGHTENGINE_API_USER,
+        api_secret: process.env.SIGHTENGINE_API_SECRET,
+      });
 
-    const res = await fetch(`https://api.sightengine.com/1.0/check.json?${params}`);
-    const data = await res.json();
-    return data.type?.ai_generated ?? 0; // score 0–1
-  } catch (err) {
-    console.error("AI check failed:", err.message);
-    return 0; // if check fails, don't block the report
-  }
+      https.get(`https://api.sightengine.com/1.0/check.json?${params}`, (res) => {
+        let data = "";
+        res.on("data", (chunk) => { data += chunk; });
+        res.on("end", () => {
+          try {
+            const json = JSON.parse(data);
+            resolve(json.type?.ai_generated ?? 0);
+          } catch {
+            resolve(0);
+          }
+        });
+      }).on("error", (err) => {
+        console.error("AI check failed:", err.message);
+        resolve(0);
+      });
+    } catch (err) {
+      console.error("AI check failed:", err.message);
+      resolve(0);
+    }
+  });
 }
 
 // ── Create Report ───────────────────────────────────────────────
