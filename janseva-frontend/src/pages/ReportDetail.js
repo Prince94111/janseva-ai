@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import CategoryBadge from '../components/CategoryBadge';
 import SeverityBadge from '../components/SeverityBadge';
 import { getReportById, voteReport, addComment as addCommentAPI, downloadPDF, deleteReport as deleteReportAPI } from '../api';
@@ -47,7 +47,7 @@ function timeAgo(dateStr) {
 
 export default function ReportDetail() {
   const { id } = useParams();
-
+  const navigate = useNavigate();
   const [report,      setReport]      = useState(null);
   const [loading,     setLoading]     = useState(true);
   const [error,       setError]       = useState(null);
